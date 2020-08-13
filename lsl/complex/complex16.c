@@ -6,15 +6,15 @@ int complex16_isnonzero(complex16 c) {
 }
 
 int complex16_isnan(complex16 c) {
-    return isnan(c.real) || isnan(c.imag);
+    return 0;
 }
 
 int complex16_isinf(complex16 c) {
-    return isinf(c.real) || isinf(c.imag);
+    return 0;
 }
 
 int complex16_isfinite(complex16 c) {
-    return isfinite(c.real) && isfinite(c.imag);
+    return 1;
 }
 
 int complex16_absolute(complex16 c) {

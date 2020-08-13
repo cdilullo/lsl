@@ -6,15 +6,15 @@ int complex32_isnonzero(complex32 c) {
 }
 
 int complex32_isnan(complex32 c) {
-    return isnan(c.real) || isnan(c.imag);
+    return 0;
 }
 
 int complex32_isinf(complex32 c) {
-    return isinf(c.real) || isinf(c.imag);
+    return 0;
 }
 
 int complex32_isfinite(complex32 c) {
-    return isfinite(c.real) && isfinite(c.imag);
+    return 1;
 }
 
 int complex32_absolute(complex32 c) {

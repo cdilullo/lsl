@@ -22,17 +22,17 @@ int complex8_isnonzero(complex8 c) {
 
 int complex8_isnan(complex8 c) {
     const signed char* sc = fourBitLUT[c.real_imag];
-    return isnan(sc[0]) || isnan(sc[1]);
+    return 0;
 }
 
 int complex8_isinf(complex8 c) {
     const signed char* sc = fourBitLUT[c.real_imag];
-    return isinf(sc[0]) || isinf(sc[1]);
+    return 0;
 }
 
 int complex8_isfinite(complex8 c) {
     const signed char* sc = fourBitLUT[c.real_imag];
-    return isfinite(sc[0]) && isfinite(sc[1]);
+    return 1;
 }
 
 int complex8_absolute(complex8 c) {
