@@ -303,10 +303,15 @@ ExtensionModules = [Extension('reader._gofast', ['lsl/reader/gofast.c', 'lsl/rea
             Extension('correlator._core', ['lsl/correlator/core.cpp'], include_dirs=[numpy.get_include()], libraries=['m'], extra_compile_args=coreExtraFlags, extra_link_args=coreExtraLibs), 
             Extension('imaging._gridder', ['lsl/imaging/gridder.cpp'], include_dirs=[numpy.get_include()], libraries=['m'], extra_compile_args=coreExtraFlags, extra_link_args=coreExtraLibs), 
             Extension('sim._simfast', ['lsl/sim/simfast.c', 'lsl/sim/const.c', 'lsl/sim/j1.c', 'lsl/sim/polevl.c', 'lsl/sim/mtherr.c', 'lsl/sim/sf_error.c'], include_dirs=[numpy.get_include()], libraries=['m'], extra_compile_args=coreExtraFlags, extra_link_args=coreExtraLibs), 
-            Extension('misc._wisdom', ['lsl/misc/wisdom.c'],include_dirs=[numpy.get_include()], libraries=['m'], extra_compile_args=coreExtraFlags, extra_link_args=coreExtraLibs), ]
+            Extension('misc._wisdom', ['lsl/misc/wisdom.c'],include_dirs=[numpy.get_include()], libraries=['m'], extra_compile_args=coreExtraFlags, extra_link_args=coreExtraLibs),
+            Extension('complex.numpy_complex8', ['lsl/complex/complex8.c', 'lsl/complex/numpy_complex8.c'], include_dirs=[numpy.get_include()], extra_compile_args=['-std=c99']),
+            Extension('complex.numpy_complex16', ['lsl/complex/complex16.c', 'lsl/complex/numpy_complex16.c'], include_dirs=[numpy.get_include()], extra_compile_args=['-std=c99']),
+            Extension('complex.numpy_complex32', ['lsl/complex/complex32.c', 'lsl/complex/numpy_complex32.c'], include_dirs=[numpy.get_include()], extra_compile_args=['-std=c99']),]
+
 
 # Update the version information
 write_version_info()
+
 
 setup(
     cmdclass = {'build': lsl_build, 'build_ext': lsl_build_ext}, 
