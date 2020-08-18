@@ -5,18 +5,24 @@
 extern "C" {
 #endif
 
+#include <Python.h>
 #include "complex_int8.h"
 
-#define LSL_MAX_COMPLEX_DTYPES 3
+#define NPY_COMPLEX_INT8 256
+#define NPY_COMPLEX_INT16 257
+#define NPY_COMPLEX_INT32 258
 
-#define LSL_COMPLEX_INT8 55
-#define LSL_COMPLEX_INT16 56
-#define LSL_COMPLEX_INT32 57
+inline static int import_complex_int(void) {
+    PyObject *module = PyImport_ImportModule("lsl.complex");
+    if( module == NULL ) {
+        PyErr_Warn(PyExc_RuntimeWarning, "Cannot load the LSL complex integer types");
+	return -1;
+    }
+    Py_XDECREF(module);
 
-extern int lsl_complex_dtypes[LSL_MAX_COMPLEX_DTYPES];
+    return 0;
+}
 
-void lsl_register_complex_int(int bit_depth, int type_num);
-int lsl_get_complex_int(int bit_depth);
 void lsl_unpack_ci8(complexi8 packed, signed char* real, signed char* imag);
 
 #ifdef __cplusplus

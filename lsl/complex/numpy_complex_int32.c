@@ -278,11 +278,14 @@ static void resister_cast_function_ci32(int sourceType, int destType, PyArray_Ve
 
 static PyObject* complexi32_arrtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     complexi32 c;
+    Py_complex cmplx;
 
-    if( !PyArg_ParseTuple(args, "hh", &c.real, &c.imag) ) {
+    if( !PyArg_ParseTuple(args, "D", &cmplx) ) {
         return NULL;
     }
     
+    c.real = cmplx.real;
+    c.imag = cmplx.imag;
     return PyArray_Scalar(&c, complexi32_descr, NULL);
 }
 
@@ -405,8 +408,8 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     complexi32_descr->type = 'b';
     complexi32_descr->byteorder = '=';
     complexi32_descr->type_num = 0; /* assigned at registration */
-    complexi32_descr->elsize = sizeof(unsigned char)*1;
-    complexi32_descr->alignment = 1;
+    complexi32_descr->elsize = sizeof(short int)*2;
+    complexi32_descr->alignment = sizeof(short int);
     complexi32_descr->subarray = NULL;
     complexi32_descr->fields = NULL;
     complexi32_descr->names = NULL;
@@ -414,9 +417,7 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     
     Py_INCREF(&PyComplexInt32ArrType_Type);
     complexi32Num = PyArray_RegisterDataType(complexi32_descr);
-    lsl_register_complex_int(32, complexi32Num);
-    
-    if( complexi32Num < 0 ) {
+    if( complexi32Num < 0 || complexi32Num != NPY_COMPLEX_INT32 ) {
         return -1;
     }
     

@@ -278,11 +278,14 @@ static void resister_cast_function_ci16(int sourceType, int destType, PyArray_Ve
 
 static PyObject* complexi16_arrtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     complexi16 c;
+    Py_complex cmplx;
 
-    if( !PyArg_ParseTuple(args, "bb", &c.real, &c.imag) ) {
+    if( !PyArg_ParseTuple(args, "D", &cmplx) ) {
         return NULL;
     }
     
+    c.real = cmplx.real;
+    c.imag = cmplx.imag;
     return PyArray_Scalar(&c, complexi16_descr, NULL);
 }
 
@@ -405,8 +408,8 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     complexi16_descr->type = 'b';
     complexi16_descr->byteorder = '=';
     complexi16_descr->type_num = 0; /* assigned at registration */
-    complexi16_descr->elsize = sizeof(unsigned char)*1;
-    complexi16_descr->alignment = 1;
+    complexi16_descr->elsize = sizeof(unsigned char)*2;
+    complexi16_descr->alignment = sizeof(unsigned char);
     complexi16_descr->subarray = NULL;
     complexi16_descr->fields = NULL;
     complexi16_descr->names = NULL;
@@ -414,9 +417,7 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     
     Py_INCREF(&PyComplexInt16ArrType_Type);
     complexi16Num = PyArray_RegisterDataType(complexi16_descr);
-    lsl_register_complex_int(16, complexi16Num);
-    
-    if( complexi16Num < 0 ) {
+    if( complexi16Num < 0 || complexi16Num != NPY_COMPLEX_INT16 ) {
         return -1;
     }
     

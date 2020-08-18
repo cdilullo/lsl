@@ -276,11 +276,14 @@ static void resister_cast_function_ci8(int sourceType, int destType, PyArray_Vec
 
 static PyObject* complexi8_arrtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     complexi8 c;
+    Py_complex cmplx;
 
-    if( !PyArg_ParseTuple(args, "b", &c.real_imag) ) {
+    if( !PyArg_ParseTuple(args, "D", &cmplx) ) {
         return NULL;
     }
     
+    c.real_imag = (  ((((signed char) cmplx.real) * 16) & 0xF0) \
+                   | ((((signed char) cmplx.imag) * 16 ) >> 4) );
     return PyArray_Scalar(&c, complexi8_descr, NULL);
 }
 
@@ -309,7 +312,8 @@ static long complexi8_arrtype_hash(PyObject *o) {
 static PyObject* complexi8_arrtype_repr(PyObject *o) {
     char str[64];
     complexi8 c = ((PyComplexInt8ScalarObject *)o)->obval;
-    sprintf(str, "complex_int8(%u)", c.real_imag);
+    const signed char* sc = fourBitLUT[c.real_imag];
+    sprintf(str, "complex_int8(%u [%i, %i])", c.real_imag, sc[0], sc[1]);
     return PyUString_FromString(str);
 }
 
@@ -407,7 +411,7 @@ int create_complex_int8(PyObject* m, PyObject* numpy_dict) {
     complexi8_descr->byteorder = '=';
     complexi8_descr->type_num = 0; /* assigned at registration */
     complexi8_descr->elsize = sizeof(unsigned char)*1;
-    complexi8_descr->alignment = 1;
+    complexi8_descr->alignment = sizeof(unsigned char);
     complexi8_descr->subarray = NULL;
     complexi8_descr->fields = NULL;
     complexi8_descr->names = NULL;
@@ -415,9 +419,7 @@ int create_complex_int8(PyObject* m, PyObject* numpy_dict) {
     
     Py_INCREF(&PyComplexInt8ArrType_Type);
     complexi8Num = PyArray_RegisterDataType(complexi8_descr);
-    lsl_register_complex_int(8, complexi8Num);
-    
-    if( complexi8Num < 0 ) {
+    if( complexi8Num < 0 || complexi8Num != NPY_COMPLEX_INT8 ) {
         return -1;
     }
     
