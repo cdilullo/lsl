@@ -282,8 +282,9 @@ static PyObject* complexi8_arrtype_new(PyTypeObject *type, PyObject *args, PyObj
         return NULL;
     }
     
+    // Ouch
     c.real_imag = (  ((((signed char) cmplx.real) * 16) & 0xF0) \
-                   | ((((signed char) cmplx.imag) * 16 ) >> 4) );
+                   | ((((signed char) cmplx.imag) * 16) >> 4  ) );
     return PyArray_Scalar(&c, complexi8_descr, NULL);
 }
 
