@@ -17,7 +17,7 @@ int complexi32_isfinite(complexi32 c) {
     return 1;
 }
 
-int complexi32_absolute(complexi32 c) {
+double complexi32_absolute(complexi32 c) {
     return sqrt(((int) c.real)*c.real + ((int) c.imag)*c.imag);
 }
 

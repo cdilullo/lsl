@@ -99,7 +99,7 @@ PyArray_Descr *complexi32_descr;
 
 static PyObject* CI32_getitem(char *ip, PyArrayObject *ap) {
     complexi32 c;
-    PyObject *tuple;
+    PyObject *item;
     
     if( (ap == NULL) || PyArray_ISBEHAVED_RO(ap) ) {
         c = *((complexi32 *) ip);
@@ -111,10 +111,10 @@ static PyObject* CI32_getitem(char *ip, PyArrayObject *ap) {
         Py_DECREF(descr);
     }
 
-    tuple = PyObject_New(PyComplexInt32ScalarObject, &PyComplexInt32ArrType_Type);
-    ((PyComplexInt32ScalarObject *)tuple)->obval = c;
+    item = (PyObject*) PyObject_New(PyComplexInt32ScalarObject, &PyComplexInt32ArrType_Type);
+    ((PyComplexInt32ScalarObject *)item)->obval = c;
     
-    return tuple;
+    return item;
 }
 
 static int CI32_setitem(PyObject *op, char *ov, PyArrayObject *ap) {
@@ -240,31 +240,29 @@ static void CI32_fillwithscalar(complexi32 *buffer, npy_intp length, complexi32 
     }
 }
 
-#define MAKE_T_TO_CI32(TYPE, type)                                        \
-static void                                                                    \
-TYPE ## _to_complexi32(type *ip, complexi32 *op, npy_intp n,                     \
-               PyArrayObject *NPY_UNUSED(aip), PyArrayObject *NPY_UNUSED(aop)) \
-{                                                                              \
-    while (n--) {                                                              \
-        op->real = (signed char) (*ip++);                                      \
-        op->imag = 0;                                                          \
-        *op++;                                                                 \
-    }                                                                          \
+#define MAKE_T_TO_CI32(TYPE, type)                                       \
+static void TYPE ## _to_complexi32(type *ip, complexi32 *op, npy_intp n, \
+                                   PyArrayObject *NPY_UNUSED(aip),       \
+                                   PyArrayObject *NPY_UNUSED(aop)) {     \
+    while (n--) {                                                        \
+        op->real = (signed char) (*ip++);                                \
+        op->imag = 0;                                                    \
+        *op++;                                                           \
+    }                                                                    \
 }
 
 MAKE_T_TO_CI32(BOOL, npy_bool);
 MAKE_T_TO_CI32(BYTE, npy_byte);
 
-#define MAKE_CI32_TO_CT(TYPE, type)                                       \
-static void                                                                    \
-complexi32_to_## TYPE(complexi32* ip, type *op, npy_intp n,                      \
-               PyArrayObject *NPY_UNUSED(aip), PyArrayObject *NPY_UNUSED(aop)) \
-{                                                                              \
-    while (n--) {                                                              \
-        *(op++) = (type) ip->real;                                             \
-        *(op++) = (type) ip->imag;                                             \
-        (*ip++);                                                               \
-    }                                                                          \
+#define MAKE_CI32_TO_CT(TYPE, type)                                     \
+static void complexi32_to_## TYPE(complexi32* ip, type *op, npy_intp n, \
+                                  PyArrayObject *NPY_UNUSED(aip),       \
+                                  PyArrayObject *NPY_UNUSED(aop)) {     \
+    while (n--) {                                                       \
+        *(op++) = (type) ip->real;                                      \
+        *(op++) = (type) ip->imag;                                      \
+        (*ip++);                                                        \
+    }                                                                   \
 }
 
 MAKE_CI32_TO_CT(CFLOAT, npy_float);
@@ -281,7 +279,7 @@ static void resister_cast_function_ci32(int sourceType, int destType, PyArray_Ve
 static PyObject* complexi32_arrtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     complexi32 c;
 
-    if( !PyArg_ParseTuple(args, "ii", &c.real, &c.imag) ) {
+    if( !PyArg_ParseTuple(args, "hh", &c.real, &c.imag) ) {
         return NULL;
     }
     
@@ -303,8 +301,8 @@ static PyObject* gentype_richcompare_ci32(PyObject *self, PyObject *other, int c
 static long complexi32_arrtype_hash(PyObject *o) {
     complexi32 c = ((PyComplexInt32ScalarObject *)o)->obval;
     long value = 0x456789;
-    value = (10000004 * value) ^ _Py_HashBytes(&(c.real), sizeof(signed char));
-    value = (10000004 * value) ^ _Py_HashBytes(&(c.imag), sizeof(signed char));
+    value = (10000004 * value) ^ _Py_HashDouble(c.real);
+    value = (10000004 * value) ^ _Py_HashDouble(c.imag);
     if( value == -1 ) {
         value = -2;
     }
@@ -325,17 +323,18 @@ static PyObject* complexi32_arrtype_str(PyObject *o) {
     return PyUString_FromString(str);
 }
 
-#define UNARY_UFUNC_CI32(name, ret_type)\
-static void \
-complexi32_##name##_ufunc(char** args, npy_intp* dimensions,\
-    npy_intp* steps, void* data) {\
-    char *ip1 = args[0], *op1 = args[1];\
-    npy_intp is1 = steps[0], os1 = steps[1];\
-    npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < n; i++, ip1 += is1, op1 += os1){\
-        const complexi32 in1 = *(complexi32 *)ip1;\
-        *((ret_type *)op1) = complexi32_##name(in1);};}
+#define UNARY_UFUNC_CI32(name, ret_type)                                 \
+static void complexi32_##name##_ufunc(char** args, npy_intp* dimensions, \
+                                      npy_intp* steps, void* data) {     \
+    char *ip1 = args[0], *op1 = args[1];                                 \
+    npy_intp is1 = steps[0], os1 = steps[1];                             \
+    npy_intp n = dimensions[0];                                          \
+    npy_intp i;                                                          \
+    for(i=0; i<n; i++, ip1+=is1, op1+=os1) {                             \
+        const complexi32 in1 = *(complexi32 *)ip1;                       \
+        *((ret_type *)op1) = complexi32_##name(in1);                     \
+    }                                                                    \
+}
 
 UNARY_UFUNC_CI32(isnan, npy_bool)
 UNARY_UFUNC_CI32(isinf, npy_bool)
@@ -344,18 +343,19 @@ UNARY_UFUNC_CI32(absolute, npy_double)
 UNARY_UFUNC_CI32(negative, complexi32)
 UNARY_UFUNC_CI32(conjugate, complexi32)
 
-#define BINARY_GEN_UFUNC_CI32(name, func_name, arg_type, ret_type)\
-static void \
-complexi32_##func_name##_ufunc(char** args, npy_intp* dimensions,\
-    npy_intp* steps, void* data) {\
-    char *ip1 = args[0], *ip2 = args[1], *op1 = args[2];\
-    npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];\
-    npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < n; i++, ip1 += is1, ip2 += is2, op1 += os1){\
-        const complexi32 in1 = *(complexi32 *)ip1;\
-        const arg_type in2 = *(arg_type *)ip2;\
-        *((ret_type *)op1) = complexi32_##func_name(in1, in2);};};
+#define BINARY_GEN_UFUNC_CI32(name, func_name, arg_type, ret_type)            \
+static void complexi32_##func_name##_ufunc(char** args, npy_intp* dimensions, \
+                                           npy_intp* steps, void* data) {     \
+    char *ip1 = args[0], *ip2 = args[1], *op1 = args[2];                      \
+    npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];                  \
+    npy_intp n = dimensions[0];                                               \
+    npy_intp i;                                                               \
+    for(i=0; i<n; i++, ip1+=is1, ip2+=is2, op1+=os1) {                        \
+        const complexi32 in1 = *(complexi32 *)ip1;                            \
+        const arg_type in2 = *(arg_type *)ip2;                                \
+        *((ret_type *)op1) = complexi32_##func_name(in1, in2);                \
+    }                                                                         \
+}
 
 #define BINARY_UFUNC_CI32(name, ret_type)\
     BINARY_GEN_UFUNC_CI32(name, name, complexi32, ret_type)
@@ -414,7 +414,7 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     
     Py_INCREF(&PyComplexInt32ArrType_Type);
     complexi32Num = PyArray_RegisterDataType(complexi32_descr);
-    lsl_register_complex_int(8, complexi32Num);
+    lsl_register_complex_int(32, complexi32Num);
     
     if( complexi32Num < 0 ) {
         return -1;

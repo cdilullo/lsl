@@ -35,21 +35,23 @@ int complexi8_isfinite(complexi8 c) {
     return 1;
 }
 
-int complexi8_absolute(complexi8 c) {
+double complexi8_absolute(complexi8 c) {
     const signed char* sc = fourBitLUT[c.real_imag];
     return sqrt(((int) sc[0])*sc[0] + ((int) sc[1])*sc[1]);
 }
 
 complexi8 complexi8_negative(complexi8 c) {
-    signed char real = -(c.real_imag & 0xF0);
-    signed char imag = -(c.real_imag << 4);
-    return (complexi8) {real | (imag >> 4)};
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = -sc[0];
+    signed char imag = -sc[1];
+    return (complexi8) {((unsigned char) real << 4) | ((unsigned char) imag)};
 }
 
 complexi8 complexi8_conjugate(complexi8 c) {
-    signed char real = (c.real_imag & 0xF0);
-    signed char imag = -(c.real_imag << 4);
-    return (complexi8) {real | (imag >> 4)};
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = sc[0];
+    signed char imag = -sc[1];
+    return (complexi8) {((unsigned char) real << 4) | ((unsigned char) imag)};
 }
 
 int complexi8_equal(complexi8 c1, complexi8 c2) {

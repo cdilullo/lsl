@@ -17,7 +17,7 @@ int complexi16_isfinite(complexi16 c) {
     return 1;
 }
 
-int complexi16_absolute(complexi16 c) {
+double complexi16_absolute(complexi16 c) {
     return sqrt(((int) c.real)*c.real + ((int) c.imag)*c.imag);
 }
 

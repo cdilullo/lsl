@@ -99,7 +99,7 @@ PyArray_Descr *complexi8_descr;
 
 static PyObject* CI8_getitem(char *ip, PyArrayObject *ap) {
     complexi8 c;
-    PyObject *tuple;
+    PyObject *item;
     
     if( (ap == NULL) || PyArray_ISBEHAVED_RO(ap) ) {
         c = *((complexi8 *) ip);
@@ -110,10 +110,10 @@ static PyObject* CI8_getitem(char *ip, PyArrayObject *ap) {
         Py_DECREF(descr);
     }
     
-    tuple = PyObject_New(PyComplexInt8ScalarObject, &PyComplexInt8ArrType_Type);
-    ((PyComplexInt8ScalarObject *)tuple)->obval = c;
+    item = (PyObject*) PyObject_New(PyComplexInt8ScalarObject, &PyComplexInt8ArrType_Type);
+    ((PyComplexInt8ScalarObject *)item)->obval = c;
     
-    return tuple;
+    return item;
 }
 
 static int CI8_setitem(PyObject *op, char *ov, PyArrayObject *ap) {
@@ -237,32 +237,30 @@ static void CI8_fillwithscalar(complexi8 *buffer, npy_intp length, complexi8 *va
     }
 }
 
-#define MAKE_T_TO_CI8(TYPE, type)                                         \
-static void                                                                    \
-TYPE ## _to_complexi8(type *ip, complexi8 *op, npy_intp n,                       \
-               PyArrayObject *NPY_UNUSED(aip), PyArrayObject *NPY_UNUSED(aop)) \
-{                                                                              \
-    while (n--) {                                                              \
-        op->real_imag = (unsigned char) ((*ip++) * 16);                        \
-        *op++;                                                                 \
-    }                                                                          \
+#define MAKE_T_TO_CI8(TYPE, type)                                      \
+static void TYPE ## _to_complexi8(type *ip, complexi8 *op, npy_intp n, \
+                                  PyArrayObject *NPY_UNUSED(aip),      \
+                                  PyArrayObject *NPY_UNUSED(aop)) {    \
+    while (n--) {                                                      \
+        op->real_imag = (unsigned char) ((*ip++) * 16);                \
+        *op++;                                                         \
+    }                                                                  \
 }
 
 MAKE_T_TO_CI8(BOOL, npy_bool);
 MAKE_T_TO_CI8(BYTE, npy_byte);
 
-#define MAKE_CI8_TO_CT(TYPE, type)                                        \
-static void                                                                    \
-complexi8_to_## TYPE(complexi8* ip, type *op, npy_intp n,                        \
-               PyArrayObject *NPY_UNUSED(aip), PyArrayObject *NPY_UNUSED(aop)) \
-{                                                                              \
-    const signed char* sc;                                                     \
-    while (n--) {                                                              \
-        sc = fourBitLUT[ip->real_imag];                                        \
-        *(op++) = (type) sc[0];                                                \
-        *(op++) = (type) sc[1];                                                \
-        (*ip++);                                                               \
-    }                                                                          \
+#define MAKE_CI8_TO_CT(TYPE, type)                                    \
+static void complexi8_to_## TYPE(complexi8* ip, type *op, npy_intp n, \
+                                PyArrayObject *NPY_UNUSED(aip),       \
+                                PyArrayObject *NPY_UNUSED(aop)) {     \
+    const signed char* sc;                                            \
+    while (n--) {                                                     \
+        sc = fourBitLUT[ip->real_imag];                               \
+        *(op++) = (type) sc[0];                                       \
+        *(op++) = (type) sc[1];                                       \
+        (*ip++);                                                      \
+    }                                                                 \
 }
 
 MAKE_CI8_TO_CT(CFLOAT, npy_float);
@@ -279,7 +277,7 @@ static void resister_cast_function_ci8(int sourceType, int destType, PyArray_Vec
 static PyObject* complexi8_arrtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     complexi8 c;
 
-    if( !PyArg_ParseTuple(args, "i", &c.real_imag) ) {
+    if( !PyArg_ParseTuple(args, "b", &c.real_imag) ) {
         return NULL;
     }
     
@@ -301,7 +299,7 @@ static PyObject* gentype_richcompare_ci8(PyObject *self, PyObject *other, int cm
 static long complexi8_arrtype_hash(PyObject *o) {
     complexi8 c = ((PyComplexInt8ScalarObject *)o)->obval;
     long value = 0x456789;
-    value = (10000004 * value) ^ _Py_HashBytes(&(c.real_imag), sizeof(unsigned char));
+    value = (10000004 * value) ^ _Py_HashDouble(c.real_imag);
     if( value == -1 ) {
         value = -2;
     }
@@ -323,17 +321,18 @@ static PyObject* complexi8_arrtype_str(PyObject *o) {
     return PyUString_FromString(str);
 }
 
-#define UNARY_UFUNC_CI8(name, ret_type)\
-static void \
-complexi8_##name##_ufunc(char** args, npy_intp* dimensions,\
-    npy_intp* steps, void* data) {\
-    char *ip1 = args[0], *op1 = args[1];\
-    npy_intp is1 = steps[0], os1 = steps[1];\
-    npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < n; i++, ip1 += is1, op1 += os1){\
-        const complexi8 in1 = *(complexi8 *)ip1;\
-        *((ret_type *)op1) = complexi8_##name(in1);};}
+#define UNARY_UFUNC_CI8(name, ret_type)                                 \
+static void complexi8_##name##_ufunc(char** args, npy_intp* dimensions, \
+                                     npy_intp* steps, void* data) {     \
+    char *ip1 = args[0], *op1 = args[1];                                \
+    npy_intp is1 = steps[0], os1 = steps[1];                            \
+    npy_intp n = dimensions[0];                                         \
+    npy_intp i;                                                         \
+    for(i = 0; i < n; i++, ip1 += is1, op1 += os1) {                    \
+        const complexi8 in1 = *(complexi8 *)ip1;                        \
+        *((ret_type *)op1) = complexi8_##name(in1);                     \
+    }                                                                   \
+}
 
 UNARY_UFUNC_CI8(isnan, npy_bool)
 UNARY_UFUNC_CI8(isinf, npy_bool)
@@ -342,22 +341,23 @@ UNARY_UFUNC_CI8(absolute, npy_double)
 UNARY_UFUNC_CI8(negative, complexi8)
 UNARY_UFUNC_CI8(conjugate, complexi8)
 
-#define BINARY_GEN_UFUNC_CI8(name, func_name, arg_type, ret_type)\
-static void \
-complexi8_##func_name##_ufunc(char** args, npy_intp* dimensions,\
-    npy_intp* steps, void* data) {\
-    char *ip1 = args[0], *ip2 = args[1], *op1 = args[2];\
-    npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];\
-    npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < n; i++, ip1 += is1, ip2 += is2, op1 += os1){\
-        const complexi8 in1 = *(complexi8 *)ip1;\
-        const arg_type in2 = *(arg_type *)ip2;\
-        *((ret_type *)op1) = complexi8_##func_name(in1, in2);};};
+#define BINARY_GEN_UFUNC_CI8(name, func_name, arg_type, ret_type)            \
+static void complexi8_##func_name##_ufunc(char** args, npy_intp* dimensions, \
+                                          npy_intp* steps, void* data) {     \
+    char *ip1 = args[0], *ip2 = args[1], *op1 = args[2];                     \
+    npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];                 \
+    npy_intp n = dimensions[0];                                              \
+    npy_intp i;                                                              \
+    for(i=0; i<n; i++, ip1+=is1, ip2+=is2, op1+=os1) {                       \
+        const complexi8 in1 = *(complexi8 *)ip1;                             \
+        const arg_type in2 = *(arg_type *)ip2;                               \
+        *((ret_type *)op1) = complexi8_##func_name(in1, in2);                \
+        }                                                                    \
+}
 
-#define BINARY_UFUNC_CI8(name, ret_type)\
+#define BINARY_UFUNC_CI8(name, ret_type) \
     BINARY_GEN_UFUNC_CI8(name, name, complexi8, ret_type)
-#define BINARY_SCALAR_UFUNC_CI8(name, ret_type)\
+#define BINARY_SCALAR_UFUNC_CI8(name, ret_type) \
     BINARY_GEN_UFUNC_CI8(name, name##_scalar, npy_int8, ret_type)
 
 BINARY_UFUNC_CI8(equal, npy_bool)

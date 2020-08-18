@@ -99,7 +99,7 @@ PyArray_Descr *complexi16_descr;
 
 static PyObject* CI16_getitem(char *ip, PyArrayObject *ap) {
     complexi16 c;
-    PyObject *tuple;
+    PyObject *item;
     
     if( (ap == NULL) || PyArray_ISBEHAVED_RO(ap) ) {
         c = *((complexi16 *) ip);
@@ -111,10 +111,10 @@ static PyObject* CI16_getitem(char *ip, PyArrayObject *ap) {
         Py_DECREF(descr);
     }
 
-    tuple = PyObject_New(PyComplexInt16ScalarObject, &PyComplexInt16ArrType_Type);
-    ((PyComplexInt16ScalarObject *)tuple)->obval = c;
+    item = (PyObject*) PyObject_New(PyComplexInt16ScalarObject, &PyComplexInt16ArrType_Type);
+    ((PyComplexInt16ScalarObject *)item)->obval = c;
     
-    return tuple;
+    return item;
 }
 
 static int CI16_setitem(PyObject *op, char *ov, PyArrayObject *ap) {
@@ -240,31 +240,29 @@ static void CI16_fillwithscalar(complexi16 *buffer, npy_intp length, complexi16 
     }
 }
 
-#define MAKE_T_TO_CI16(TYPE, type)                                        \
-static void                                                                    \
-TYPE ## _to_complexi16(type *ip, complexi16 *op, npy_intp n,                     \
-               PyArrayObject *NPY_UNUSED(aip), PyArrayObject *NPY_UNUSED(aop)) \
-{                                                                              \
-    while (n--) {                                                              \
-        op->real = (signed char) (*ip++);                                      \
-        op->imag = 0;                                                          \
-        *op++;                                                                 \
-    }                                                                          \
+#define MAKE_T_TO_CI16(TYPE, type)                                       \
+static void TYPE ## _to_complexi16(type *ip, complexi16 *op, npy_intp n, \
+                                   PyArrayObject *NPY_UNUSED(aip),       \
+                                   PyArrayObject *NPY_UNUSED(aop)) {     \
+    while (n--) {                                                        \
+        op->real = (signed char) (*ip++);                                \
+        op->imag = 0;                                                    \
+        *op++;                                                           \
+    }                                                                    \
 }
 
 MAKE_T_TO_CI16(BOOL, npy_bool);
 MAKE_T_TO_CI16(BYTE, npy_byte);
 
-#define MAKE_CI16_TO_CT(TYPE, type)                                       \
-static void                                                                    \
-complexi16_to_## TYPE(complexi16* ip, type *op, npy_intp n,                      \
-               PyArrayObject *NPY_UNUSED(aip), PyArrayObject *NPY_UNUSED(aop)) \
-{                                                                              \
-    while (n--) {                                                              \
-        *(op++) = (type) ip->real;                                             \
-        *(op++) = (type) ip->imag;                                             \
-        (*ip++);                                                               \
-    }                                                                          \
+#define MAKE_CI16_TO_CT(TYPE, type)                                     \
+static void complexi16_to_## TYPE(complexi16* ip, type *op, npy_intp n, \
+                                  PyArrayObject *NPY_UNUSED(aip),       \
+                                  PyArrayObject *NPY_UNUSED(aop)) {     \
+    while (n--) {                                                       \
+        *(op++) = (type) ip->real;                                      \
+        *(op++) = (type) ip->imag;                                      \
+        (*ip++);                                                        \
+    }                                                                   \
 }
 
 MAKE_CI16_TO_CT(CFLOAT, npy_float);
@@ -281,7 +279,7 @@ static void resister_cast_function_ci16(int sourceType, int destType, PyArray_Ve
 static PyObject* complexi16_arrtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     complexi16 c;
 
-    if( !PyArg_ParseTuple(args, "ii", &c.real, &c.imag) ) {
+    if( !PyArg_ParseTuple(args, "bb", &c.real, &c.imag) ) {
         return NULL;
     }
     
@@ -303,8 +301,8 @@ static PyObject* gentype_richcompare_ci16(PyObject *self, PyObject *other, int c
 static long complexi16_arrtype_hash(PyObject *o) {
     complexi16 c = ((PyComplexInt16ScalarObject *)o)->obval;
     long value = 0x456789;
-    value = (10000004 * value) ^ _Py_HashBytes(&(c.real), sizeof(signed char));
-    value = (10000004 * value) ^ _Py_HashBytes(&(c.imag), sizeof(signed char));
+    value = (10000004 * value) ^ _Py_HashDouble(c.real);
+    value = (10000004 * value) ^ _Py_HashDouble(c.imag);
     if( value == -1 ) {
         value = -2;
     }
@@ -325,17 +323,18 @@ static PyObject* complexi16_arrtype_str(PyObject *o) {
     return PyUString_FromString(str);
 }
 
-#define UNARY_UFUNC_CI16(name, ret_type)\
-static void \
-complexi16_##name##_ufunc(char** args, npy_intp* dimensions,\
-    npy_intp* steps, void* data) {\
-    char *ip1 = args[0], *op1 = args[1];\
-    npy_intp is1 = steps[0], os1 = steps[1];\
-    npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < n; i++, ip1 += is1, op1 += os1){\
-        const complexi16 in1 = *(complexi16 *)ip1;\
-        *((ret_type *)op1) = complexi16_##name(in1);};}
+#define UNARY_UFUNC_CI16(name, ret_type)                                 \
+static void complexi16_##name##_ufunc(char** args, npy_intp* dimensions, \
+                                      npy_intp* steps, void* data) {     \
+    char *ip1 = args[0], *op1 = args[1];                                 \
+    npy_intp is1 = steps[0], os1 = steps[1];                             \
+    npy_intp n = dimensions[0];                                          \
+    npy_intp i;                                                          \
+    for(i=0; i<n; i++, ip1+=is1, op1+=os1) {                             \
+        const complexi16 in1 = *(complexi16 *)ip1;                       \
+        *((ret_type *)op1) = complexi16_##name(in1);                     \
+    }                                                                    \
+}
 
 UNARY_UFUNC_CI16(isnan, npy_bool)
 UNARY_UFUNC_CI16(isinf, npy_bool)
@@ -344,18 +343,19 @@ UNARY_UFUNC_CI16(absolute, npy_double)
 UNARY_UFUNC_CI16(negative, complexi16)
 UNARY_UFUNC_CI16(conjugate, complexi16)
 
-#define BINARY_GEN_UFUNC_CI16(name, func_name, arg_type, ret_type)\
-static void \
-complexi16_##func_name##_ufunc(char** args, npy_intp* dimensions,\
-    npy_intp* steps, void* data) {\
-    char *ip1 = args[0], *ip2 = args[1], *op1 = args[2];\
-    npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];\
-    npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < n; i++, ip1 += is1, ip2 += is2, op1 += os1){\
-        const complexi16 in1 = *(complexi16 *)ip1;\
-        const arg_type in2 = *(arg_type *)ip2;\
-        *((ret_type *)op1) = complexi16_##func_name(in1, in2);};};
+#define BINARY_GEN_UFUNC_CI16(name, func_name, arg_type, ret_type)            \
+static void complexi16_##func_name##_ufunc(char** args, npy_intp* dimensions, \
+                                           npy_intp* steps, void* data) {     \
+    char *ip1 = args[0], *ip2 = args[1], *op1 = args[2];                      \
+    npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];                  \
+    npy_intp n = dimensions[0];                                               \
+    npy_intp i;                                                               \
+    for(i=0; i<n; i++, ip1+=is1, ip2+=is2, op1+=os1) {                        \
+        const complexi16 in1 = *(complexi16 *)ip1;                            \
+        const arg_type in2 = *(arg_type *)ip2;                                \
+        *((ret_type *)op1) = complexi16_##func_name(in1, in2);                \
+    }                                                                         \
+}
 
 #define BINARY_UFUNC_CI16(name, ret_type)\
     BINARY_GEN_UFUNC_CI16(name, name, complexi16, ret_type)
@@ -414,7 +414,7 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     
     Py_INCREF(&PyComplexInt16ArrType_Type);
     complexi16Num = PyArray_RegisterDataType(complexi16_descr);
-    lsl_register_complex_int(8, complexi16Num);
+    lsl_register_complex_int(16, complexi16Num);
     
     if( complexi16Num < 0 ) {
         return -1;

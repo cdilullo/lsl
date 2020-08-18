@@ -1,5 +1,5 @@
-#ifndef __COMPLEX_INT8_H__
-#define __COMPLEX_INT8_H__
+#ifndef COMPLEX_COMPLEX_INT8_H_INCLUDE_GUARD_
+#define COMPLEX_COMPLEX_INT8_H_INCLUDE_GUARD_
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +17,7 @@ int complexi8_isnonzero(complexi8 c);
 int complexi8_isnan(complexi8 c);
 int complexi8_isinf(complexi8 c);
 int complexi8_isfinite(complexi8 c);
-int complexi8_absolute(complexi8 c);
+double complexi8_absolute(complexi8 c);
 complexi8 complexi8_negative(complexi8 c);
 complexi8 complexi8_conjugate(complexi8 c);
 int complexi8_equal(complexi8 c1, complexi8 c2);
@@ -29,4 +29,4 @@ int complexi8_less_equal(complexi8 c1, complexi8 c2);
 }
 #endif
 
-#endif
+#endif // COMPLEX_COMPLEX_INT8_H_INCLUDE_GUARD_
