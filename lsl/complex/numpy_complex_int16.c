@@ -182,14 +182,14 @@ static PyObject* pycomplexint16_positive(PyObject* self, PyObject* NPY_UNUSED(b)
                     *((complex_int16 *) dst) = complex_int16_##name(p, *((complex_int16 *) src)); \
                 }                                                             \
             } while (iternext(iter));                                         \
-        } else if(PyArray_ISCOMPLEX((PyArrayObject*) b)) {                      \
+        } else if(PyArray_ISINTEGER((PyArrayObject*) b)) {                      \
             npy_intp i;                                                       \
             do {                                                              \
                 npy_intp size = *innersizeptr;                                \
                 src = dataptrarray[0];                                        \
                 dst = dataptrarray[1];                                        \
                 for(i = 0; i < size; i++, src += innerstride, dst += itemsize) {  \
-                    *(complex_int16 *) dst = complex_int16_##name##_scalar(p, *((npy_cdouble *) src)); \
+                    *(complex_int16 *) dst = complex_int16_##name##_scalar(p, *((npy_long *) src)); \
                 }                                                             \
             } while (iternext(iter));                                         \
         } else {                                                              \
@@ -212,28 +212,16 @@ static PyObject* pycomplexint16_positive(PyObject* self, PyObject* NPY_UNUSED(b)
         npy_int32 val32;                                                      \
         complex_int16 p = {0, 0};                                                 \
         if(PyArray_Check(b)) { return pycomplexint16_##fake_name##_array_operator(a, b); } \
-        if(PyComplex_Check(a) && PyComplexInt16_Check(b)) {                      \
-            return PyComplexInt16_FromComplexInt16(complex_int16_scalar_##name(PyComplex_AsComplex(a), ((PyComplexInt16*)b)->obval));                                     \
-        }                                                                     \
-        if(PyArray_Check(b)) { return pycomplexint16_##fake_name##_array_operator(a, b); } \
-        if(PyFloat_Check(a) && PyComplexInt16_Check(b)) {                      \
-            return PyComplexInt16_FromComplexInt16(complex_int16_scalar_##name(PyFloat_AsComplex(a), ((PyComplexInt16*)b)->obval));                                     \
-        }                                                                     \
-        if(PyArray_Check(b)) { return pycomplexint16_##fake_name##_array_operator(a, b); } \
         if(PyInt_Check(a) && PyComplexInt16_Check(b)) {                      \
-            return PyComplexInt16_FromComplexInt16(complex_int16_scalar_##name(PyInt_AsComplex(a), ((PyComplexInt16*)b)->obval));                                     \
+            return PyComplexInt16_FromComplexInt16(complex_int16_scalar_##name(PyInt_AsLong(a), ((PyComplexInt16*)b)->obval));                                     \
         }                                                                     \
         PyComplexInt16_AsComplexInt16(p, a);                                    \
         if(PyComplexInt16_Check(b)) {                                          \
             return PyComplexInt16_FromComplexInt16(complex_int16_##name(p,((PyComplexInt16*)b)->obval)); \
-        } else if(PyComplex_Check(b)) {                                         \
-            return PyComplexInt16_FromComplexInt16(complex_int16_##name##_scalar(p,PyComplex_AsComplex(b))); \
-        } else if(PyFloat_Check(b)) {                                         \
-            return PyComplexInt16_FromComplexInt16(complex_int16_##name##_scalar(p,PyFloat_AsComplex(b))); \
         } else if(PyInt_Check(b)) {                                         \
-            return PyComplexInt16_FromComplexInt16(complex_int16_##name##_scalar(p,PyInt_AsComplex(b))); \
+            return PyComplexInt16_FromComplexInt16(complex_int16_##name##_scalar(p,PyInt_AsLong(b))); \
         }                                                                     \
-        PyErr_SetString(PyExc_TypeError, "Binary operation involving complex_int16 and neither complex nor complex_int16.");                                                      \
+        PyErr_SetString(PyExc_TypeError, "Binary operation involving complex_int16 and neither integer nor complex_int16.");                                                      \
         return NULL;                                                          \
     }
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(add, add)
@@ -258,20 +246,12 @@ CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(divide, divide)
             complex_int16_inplace_##name(p,((PyComplexInt16*)b)->obval);       \
             Py_INCREF(a);                                                    \
             return a;                                                        \
-        } else if(PyComplex_Check(b)) {                                        \
-            complex_int16_inplace_##name##_scalar(p,PyComplex_AsComplex(b));     \
-            Py_INCREF(a);                                                    \
-            return a;                                                        \
-        } else if(PyFloat_Check(b)) {                                        \
-            complex_int16_inplace_##name##_scalar(p,PyFloat_AsComplex(b));     \
-            Py_INCREF(a);                                                    \
-            return a;                                                        \
         } else if(PyInt_Check(b)) {                                        \
-            complex_int16_inplace_##name##_scalar(p,PyInt_AsComplex(b));     \
+            complex_int16_inplace_##name##_scalar(p,PyInt_AsLong(b));     \
             Py_INCREF(a);                                                    \
             return a;                                                        \
         }                                                                    \
-        PyErr_SetString(PyExc_TypeError, "Binary in-place operation involving complex_int16 and neither complex nor complex_int16.");                                                 \
+        PyErr_SetString(PyExc_TypeError, "Binary in-place operation involving complex_int16 and neither integer nor complex_int16.");                                                 \
         return NULL;                                                         \
     }
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(add ,add)
@@ -622,12 +602,15 @@ static int CI16_setitem(PyObject* item, complex_int16* c, void* NPY_UNUSED(ap)) 
     PyObject *element;
     if( PyComplexInt16_Check(item) ) {
         memcpy(c, &(((PyComplexInt16 *)item)->obval), sizeof(complex_int16));
+    } else if( PyComplexInt8_Check(item) ) {
+        complex_int8 i;
+        PyComplexInt8_AsComplexInt8(i, item);
+        const signed char* sc = fourBitLUT[i.real_imag];
+        c->real = sc[0];
+        c->imag = sc[1];
     } else if( PyComplex_Check(item) ) {
         c->real = PyComplex_RealAsDouble(item);
         c->imag = PyComplex_ImagAsDouble(item);
-    } else if( PyFloat_Check(item) ) {
-        c->real = PyFloat_AsDouble(item);
-        c->imag = 0;
     } else if( PyInt_Check(item) ) {
         c->real = PyInt_AsLong(item);
         c->imag = 0;
@@ -738,8 +721,18 @@ static void TYPE ## _to_complex_int16(type *ip, complex_int16 *op, npy_intp n, \
 MAKE_T_TO_CI16(BOOL, npy_bool);
 MAKE_T_TO_CI16(BYTE, npy_byte);
 
+static void CI8_to_complex_int16(complex_int8* ip, signed char *op, npy_intp n, PyArrayObject *NPY_UNUSED(aip), PyArrayObject *NPY_UNUSED(aop)) { 
+    const signed char *sc;
+    while (n--) {
+        sc = fourBitLUT[ip->real_imag];
+        *(op++) = (signed char) sc[0];
+        *(op++) = (signed char) sc[1];
+        (*ip++);
+    }
+}
+
 // This is a macro (followed by applications of the macro) that cast
-// the input complex types to complex_int16.
+// the input complex types from complex_int16.
 #define MAKE_CI16_TO_CT(TYPE, type)                                    \
 static void complex_int16_to_## TYPE(complex_int16* ip, type *op, npy_intp n, \
                                 PyArrayObject *NPY_UNUSED(aip),       \
@@ -821,8 +814,8 @@ static void complex_int16_positive_ufunc(char** args, npy_intp* dimensions, npy_
 #define BINARY_UFUNC_CI16(name, ret_type)                    \
   BINARY_GEN_UFUNC_CI16(name, name, complex_int16, complex_int16, ret_type)
 #define BINARY_SCALAR_UFUNC_CI16(name, ret_type)                             \
-  BINARY_GEN_UFUNC_CI16(name##_scalar, name##_scalar, complex_int16, npy_cdouble, ret_type) \
-  BINARY_GEN_UFUNC_CI16(scalar_##name, scalar_##name, npy_cdouble, complex_int16, ret_type)
+  BINARY_GEN_UFUNC_CI16(name##_scalar, name##_scalar, complex_int16, npy_long, ret_type) \
+  BINARY_GEN_UFUNC_CI16(scalar_##name, scalar_##name, npy_long, complex_int16, ret_type)
 // And these all do the work mentioned above, using the macros
 BINARY_UFUNC_CI16(add, complex_int16)
 BINARY_UFUNC_CI16(subtract, complex_int16)
@@ -838,10 +831,10 @@ BINARY_SCALAR_UFUNC_CI16(add, complex_int16)
 BINARY_SCALAR_UFUNC_CI16(subtract, complex_int16)
 BINARY_SCALAR_UFUNC_CI16(multiply, complex_int16)
 BINARY_SCALAR_UFUNC_CI16(divide, complex_int16)
-BINARY_GEN_UFUNC_CI16(true_divide_scalar, divide_scalar, complex_int16, npy_cdouble, complex_int16)
-BINARY_GEN_UFUNC_CI16(floor_divide_scalar, divide_scalar, complex_int16, npy_cdouble, complex_int16)
-BINARY_GEN_UFUNC_CI16(scalar_true_divide, scalar_divide, npy_cdouble, complex_int16, complex_int16)
-BINARY_GEN_UFUNC_CI16(scalar_floor_divide, scalar_divide, npy_cdouble, complex_int16, complex_int16)
+BINARY_GEN_UFUNC_CI16(true_divide_scalar, divide_scalar, complex_int16, long, complex_int16)
+BINARY_GEN_UFUNC_CI16(floor_divide_scalar, divide_scalar, complex_int16, long, complex_int16)
+BINARY_GEN_UFUNC_CI16(scalar_true_divide, scalar_divide, long, complex_int16, complex_int16)
+BINARY_GEN_UFUNC_CI16(scalar_floor_divide, scalar_divide, long, complex_int16, complex_int16)
 
 static PyObject* complex_int16_arrtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     complex_int16 c;
@@ -963,6 +956,8 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     register_cast_function_ci16(NPY_BOOL, complexi16Num, (PyArray_VectorUnaryFunc*)BOOL_to_complex_int16);
     register_cast_function_ci16(NPY_BYTE, complexi16Num, (PyArray_VectorUnaryFunc*)BYTE_to_complex_int16);
     
+    register_cast_function_ci16(NPY_COMPLEX_INT8, complexi16Num, (PyArray_VectorUnaryFunc*)CI8_to_complex_int16);
+    
     register_cast_function_ci16(complexi16Num, NPY_CFLOAT, (PyArray_VectorUnaryFunc*)complex_int16_to_CFLOAT);
     register_cast_function_ci16(complexi16Num, NPY_CDOUBLE, (PyArray_VectorUnaryFunc*)complex_int16_to_CDOUBLE);
     register_cast_function_ci16(complexi16Num, NPY_CLONGDOUBLE, (PyArray_VectorUnaryFunc*)complex_int16_to_CLONGDOUBLE);
@@ -1031,8 +1026,8 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI16(multiply);
     REGISTER_UFUNC_CI16(divide);
     
-    /* Py_complex, complex_int16 -> complex_int16 */
-    arg_types[0] = NPY_CDOUBLE;
+    /* long, complex_int16 -> complex_int16 */
+    arg_types[0] = NPY_LONG;
     arg_types[1] = complex_int16_descr->type_num;
     arg_types[2] = complex_int16_descr->type_num;
     
@@ -1041,9 +1036,9 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     REGISTER_SCALAR_UFUNC_CI16(multiply);
     REGISTER_SCALAR_UFUNC_CI16(divide);
     
-    /* complex_int16, Py_complex -> complex_int16 */
+    /* complex_int16, long -> complex_int16 */
     arg_types[0] = complex_int16_descr->type_num;
-    arg_types[1] = NPY_CDOUBLE;
+    arg_types[1] = NPY_LONG;
     arg_types[2] = complex_int16_descr->type_num;
     
     REGISTER_UFUNC_SCALAR_CI16(add);

@@ -115,28 +115,28 @@ static NPY_INLINE void complex_int16_inplace_add(complex_int16* c1, complex_int1
     c1->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_scalar_add(npy_cdouble s, complex_int16 c) {
-    signed char real = s.real + c.real;
-    signed char imag = s.imag + c.imag;
+static NPY_INLINE complex_int16 complex_int16_scalar_add(long s, complex_int16 c) {
+    signed char real = s + c.real;
+    signed char imag = 0 + c.imag;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_scalar_add(npy_cdouble s, complex_int16* c) {
-    signed char real = s.real + c->real;
-    signed char imag = s.real + c->imag;
+static NPY_INLINE void complex_int16_inplace_scalar_add(long s, complex_int16* c) {
+    signed char real = s + c->real;
+    signed char imag = 0 + c->imag;
     c->real = real;
     c->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_add_scalar(complex_int16 c, npy_cdouble s) {
-    signed char real = s.real + c.real;
-    signed char imag = s.imag + c.imag;
+static NPY_INLINE complex_int16 complex_int16_add_scalar(complex_int16 c, long s) {
+    signed char real = s + c.real;
+    signed char imag = 0 + c.imag;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_add_scalar(complex_int16* c, npy_cdouble s) {
-    signed char real = s.real + c->real;
-    signed char imag = s.real + c->imag;
+static NPY_INLINE void complex_int16_inplace_add_scalar(complex_int16* c, long s) {
+    signed char real = s + c->real;
+    signed char imag = 0 + c->imag;
     c->real = real;
     c->imag = imag;
 }
@@ -154,28 +154,28 @@ static NPY_INLINE void complex_int16_inplace_subtract(complex_int16* c1, complex
     c1->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_scalar_subtract(npy_cdouble s, complex_int16 c) {
-    signed char real = s.real - c.real;
-    signed char imag = s.imag - c.imag;
+static NPY_INLINE complex_int16 complex_int16_scalar_subtract(long s, complex_int16 c) {
+    signed char real = s - c.real;
+    signed char imag = 0 - c.imag;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_scalar_subtract(npy_cdouble s, complex_int16* c) {
-    signed char real = s.real - c->real;
-    signed char imag = s.real - c->imag;
+static NPY_INLINE void complex_int16_inplace_scalar_subtract(long s, complex_int16* c) {
+    signed char real = s - c->real;
+    signed char imag = 0 - c->imag;
     c->real = real;
     c->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_subtract_scalar(complex_int16 c, npy_cdouble s) {
-    signed char real = -s.real + c.real;
-    signed char imag = -s.imag + c.imag;
+static NPY_INLINE complex_int16 complex_int16_subtract_scalar(complex_int16 c, long s) {
+    signed char real = -s + c.real;
+    signed char imag = -0 + c.imag;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_subtract_scalar(complex_int16* c, npy_cdouble s) {
-    signed char real = -s.real + c->real;
-    signed char imag = -s.real + c->imag;
+static NPY_INLINE void complex_int16_inplace_subtract_scalar(complex_int16* c, long s) {
+    signed char real = -s + c->real;
+    signed char imag = -0 + c->imag;
     c->real = real;
     c->imag = imag;
 }
@@ -193,73 +193,73 @@ static NPY_INLINE void complex_int16_inplace_multiply(complex_int16* c1, complex
     c1->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_scalar_multiply(npy_cdouble s, complex_int16 c) {
-    signed char real = s.real*c.real - s.imag*c.imag;
-    signed char imag = s.imag*c.real + s.real*c.imag;
+static NPY_INLINE complex_int16 complex_int16_scalar_multiply(long s, complex_int16 c) {
+    signed char real = s*c.real;
+    signed char imag = s*c.imag;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_scalar_multiply(npy_cdouble s, complex_int16* c) {
-    signed char real = s.real*c->real - s.imag*c->imag;
-    signed char imag = s.imag*c->real + s.real*c->imag;
+static NPY_INLINE void complex_int16_inplace_scalar_multiply(long s, complex_int16* c) {
+    signed char real = s*c->real;
+    signed char imag = s*c->imag;
     c->real = real;
     c->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_multiply_scalar(complex_int16 c, npy_cdouble s) {
-    signed char real = s.real*c.real - s.imag*c.imag;
-    signed char imag = s.imag*c.real + s.real*c.imag;
+static NPY_INLINE complex_int16 complex_int16_multiply_scalar(complex_int16 c, long s) {
+    signed char real = s*c.real;
+    signed char imag = s*c.imag;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_multiply_scalar(complex_int16* c, npy_cdouble s) {
-    signed char real = s.real*c->real - s.imag*c->imag;
-    signed char imag = s.imag*c->real + s.real*c->imag;
+static NPY_INLINE void complex_int16_inplace_multiply_scalar(complex_int16* c, long s) {
+    signed char real = s*c->real;
+    signed char imag = s*c->imag;
     c->real = real;
     c->imag = imag;
 }
 
 static NPY_INLINE complex_int16 complex_int16_divide(complex_int16 c1, complex_int16 c2) {
-    int mag2 = ((int) c2.real)*c2.real + ((int) c1.imag)*c1.imag;
+    long mag2 = ((int) c2.real)*c2.real + ((int) c2.imag)*c2.imag;
     signed char real = (c1.real*c2.real + c1.imag*c2.imag) / mag2;
     signed char imag = (c1.imag*c2.real - c1.real*c2.imag) / mag2;
     return (complex_int16) {real, imag};
 }
 
 static NPY_INLINE void complex_int16_inplace_divide(complex_int16* c1, complex_int16 c2) {
-    int mag2 = ((int) c2.real)*c2.real + ((int) c2.imag)*c2.imag;
+    long mag2 = ((int) c2.real)*c2.real + ((int) c2.imag)*c2.imag;
     signed char real = (c1->real*c2.real + c1->imag*c2.imag) / mag2;
     signed char imag = (c1->imag*c2.real - c1->real*c2.imag) / mag2;
     c1->real = real;
     c1->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_scalar_divide(npy_cdouble s, complex_int16 c) {
-    int mag2 = ((int) c.real)*c.real + ((int) c.imag)*c.imag;
-    signed char real = (s.real*c.real + s.imag*c.imag) / mag2;
-    signed char imag = (s.real*c.real - s.imag*c.imag) / mag2;
+static NPY_INLINE complex_int16 complex_int16_scalar_divide(long s, complex_int16 c) {
+    long mag2 = ((int) c.real)*c.real + ((int) c.imag)*c.imag;
+    signed char real = (s*c.real + 0*c.imag) / mag2;
+    signed char imag = (s*c.real - 0*c.imag) / mag2;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_scalar_divide(npy_cdouble s, complex_int16* c) {
-    int mag2 = ((int) c->real)*c->real + ((int) c->imag)*c->imag;
-    signed char real = (s.real*c->real + s.imag*c->imag) / mag2;
-    signed char imag = (s.real*c->real - s.imag*c->imag) / mag2;
+static NPY_INLINE void complex_int16_inplace_scalar_divide(long s, complex_int16* c) {
+    long mag2 = ((int) c->real)*c->real + ((int) c->imag)*c->imag;
+    signed char real = (s*c->real + 0*c->imag) / mag2;
+    signed char imag = (s*c->real - 0*c->imag) / mag2;
     c->real = real;
     c->imag = imag;
 }
 
-static NPY_INLINE complex_int16 complex_int16_divide_scalar(complex_int16 c, npy_cdouble s) {
-    double mag2 = s.real*s.real + s.imag*s.imag;
-    signed char real = (c.real*s.real - c.imag*s.imag) / mag2;
-    signed char imag = (c.imag*s.real + c.real*s.imag) / mag2;
+static NPY_INLINE complex_int16 complex_int16_divide_scalar(complex_int16 c, long s) {
+    long mag2 = s*s + 0*0;
+    signed char real = (c.real*s - c.imag*0) / mag2;
+    signed char imag = (c.imag*s + c.real*0) / mag2;
     return (complex_int16) {real, imag};
 }
 
-static NPY_INLINE void complex_int16_inplace_divide_scalar(complex_int16* c, npy_cdouble s) {
-    double mag2 = s.real*s.real + s.imag*s.imag;
-    signed char real = (c->real*s.real - c->imag*s.imag) / mag2;
-    signed char imag = (c->imag*s.real + c->real*s.imag) / mag2;
+static NPY_INLINE void complex_int16_inplace_divide_scalar(complex_int16* c, long s) {
+    long mag2 = s*s + 0*0;
+    signed char real = (c->real*s - c->imag*0) / mag2;
+    signed char imag = (c->imag*s + c->real*0) / mag2;
     c->real = real;
     c->imag = imag;
 }
