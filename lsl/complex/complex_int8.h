@@ -5,25 +5,315 @@
 extern "C" {
 #endif
 
+#include "numpy/arrayobject.h"
+#include "numpy/npy_math.h"
+
 typedef struct {
 	unsigned char real_imag;
-} complexi8;
+} complex_int8;
 
-
+// Unpacking/repacking functions
 extern signed char fourBitLUT[256][2];
-void complexi8_fillLUT();
+void complex_int8_fillLUT();
 
-int complexi8_isnonzero(complexi8 c);
-int complexi8_isnan(complexi8 c);
-int complexi8_isinf(complexi8 c);
-int complexi8_isfinite(complexi8 c);
-double complexi8_absolute(complexi8 c);
-complexi8 complexi8_negative(complexi8 c);
-complexi8 complexi8_conjugate(complexi8 c);
-int complexi8_equal(complexi8 c1, complexi8 c2);
-int complexi8_not_equal(complexi8 c1, complexi8 c2);
-int complexi8_less(complexi8 c1, complexi8 c2);
-int complexi8_less_equal(complexi8 c1, complexi8 c2);
+static NPY_INLINE complex_int8 pack_ci8(signed char real, signed char imag) {
+    complex_int8 c;
+    c.real_imag =  (real * 16) & 0xF0;
+    c.real_imag |= (imag * 16) >> 4;
+    return c;
+}
+
+static NPY_INLINE void inplace_pack_ci8(signed char real, signed char imag, complex_int8 *c) {
+    c->real_imag =  (real * 16) & 0xF0;
+    c->real_imag |= (imag * 16) >> 4;
+}
+
+// Unary bool operators
+static NPY_INLINE int complex_int8_nonzero(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return sc[0] != 0 || sc[1] != 0;
+}
+
+static NPY_INLINE int complex_int8_isnan(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return 0;
+}
+
+static NPY_INLINE int complex_int8_isinf(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return 0;
+}
+
+static NPY_INLINE int complex_int8_isfinite(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return 1;
+}
+
+// Binary bool operators
+static NPY_INLINE int complex_int8_equal(complex_int8 c1, complex_int8 c2) {
+    return 
+        !complex_int8_isnan(c1) &&
+        !complex_int8_isnan(c2) &&
+        c1.real_imag == c2.real_imag; 
+}
+
+static NPY_INLINE int complex_int8_not_equal(complex_int8 c1, complex_int8 c2) {
+    return !complex_int8_equal(c1, c2);
+}
+
+static NPY_INLINE int complex_int8_less(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    return
+        (!complex_int8_isnan(c1) &&
+         !complex_int8_isnan(c2)) && (
+            sc1[0] != sc2[0] ? sc1[0] < sc2[0] :
+            sc1[1] != sc2[1] ? sc1[1] < sc2[1] : 0);
+}
+
+static NPY_INLINE int complex_int8_greater(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    return
+        (!complex_int8_isnan(c1) &&
+         !complex_int8_isnan(c2)) && (
+            sc1[0] != sc2[0] ? sc1[0] > sc2[0] :
+            sc1[1] != sc2[1] ? sc1[1] > sc2[1] : 0);
+}
+
+static NPY_INLINE int complex_int8_less_equal(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    return
+        (!complex_int8_isnan(c1) &&
+         !complex_int8_isnan(c2)) && (
+            sc1[0] != sc2[0] ? sc1[0] < sc2[0] :
+            sc1[1] != sc2[1] ? sc1[1] < sc2[1] : 1);
+}
+
+static NPY_INLINE int complex_int8_greater_equal(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    return
+        (!complex_int8_isnan(c1) &&
+         !complex_int8_isnan(c2)) && (
+            sc1[0] != sc2[0] ? sc1[0] > sc2[0] :
+            sc1[1] != sc2[1] ? sc1[1] > sc2[1] : 1);
+}
+
+// Unary float returners
+static NPY_INLINE double complex_int8_norm(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return ((double) sc[0])*sc[0] + ((double) sc[1])*sc[1];
+}
+
+static NPY_INLINE double complex_int8_absolute(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return sqrt((sc[0]*1.0)*sc[0] + (sc[1]*1.0)*sc[1]);
+}
+
+static NPY_INLINE double complex_int8_angle(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return atan2((double) sc[1], (double) sc[0]);
+}
+
+// Unary complex_int8 returners
+static NPY_INLINE complex_int8 complex_int8_negative(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = -sc[0];
+    signed char imag = -sc[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE complex_int8 complex_int8_conjugate(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real =  sc[0];
+    signed char imag = -sc[1];
+    return pack_ci8(real, imag);
+}
+
+// complex_int8-complex_int8/complex_int8-scalar/scalar-complex_int8 binary complex_int8 returners
+static NPY_INLINE complex_int8 complex_int8_add(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    signed char real = sc1[0] + sc2[0];
+    signed char imag = sc1[1] + sc2[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_add(complex_int8* c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1->real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    signed char real = sc1[0] + sc2[0];
+    signed char imag = sc1[1] + sc2[1];
+    inplace_pack_ci8(real, imag, c1);
+}
+
+static NPY_INLINE complex_int8 complex_int8_scalar_add(npy_cdouble s, complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = s.real + sc[0];
+    signed char imag = s.imag + sc[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_scalar_add(npy_cdouble s, complex_int8* c) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    signed char real = s.real + sc[0];
+    signed char imag = s.real + sc[1];
+    inplace_pack_ci8(real, imag, c);
+}
+
+static NPY_INLINE complex_int8 complex_int8_add_scalar(complex_int8 c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = s.real + sc[0];
+    signed char imag = s.imag + sc[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_add_scalar(complex_int8* c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    signed char real = s.real + sc[0];
+    signed char imag = s.real + sc[1];
+    inplace_pack_ci8(real, imag, c);
+}
+
+static NPY_INLINE complex_int8 complex_int8_subtract(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    signed char real = sc1[0] - sc2[0];
+    signed char imag = sc1[1] - sc2[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_subtract(complex_int8* c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1->real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    signed char real = sc1[0] - sc2[0];
+    signed char imag = sc1[1] - sc2[1];
+    inplace_pack_ci8(real, imag, c1);
+}
+
+static NPY_INLINE complex_int8 complex_int8_scalar_subtract(npy_cdouble s, complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = s.real - sc[0];
+    signed char imag = s.imag - sc[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_scalar_subtract(npy_cdouble s, complex_int8* c) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    signed char real = s.real - sc[0];
+    signed char imag = s.real - sc[1];
+    inplace_pack_ci8(real, imag, c);
+}
+
+static NPY_INLINE complex_int8 complex_int8_subtract_scalar(complex_int8 c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = -s.real + sc[0];
+    signed char imag = -s.imag + sc[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_subtract_scalar(complex_int8* c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    signed char real = -s.real + sc[0];
+    signed char imag = -s.real + sc[1];
+    inplace_pack_ci8(real, imag, c);
+}
+
+static NPY_INLINE complex_int8 complex_int8_multiply(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    signed char real = sc1[0]*sc2[0] - sc1[1]*sc2[1];
+    signed char imag = sc1[1]*sc2[0] + sc1[0]*sc2[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_multiply(complex_int8* c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1->real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    signed char real = sc1[0]*sc2[0] - sc1[1]*sc2[1];
+    signed char imag = sc1[1]*sc2[0] + sc1[0]*sc2[1];
+    inplace_pack_ci8(real, imag, c1);
+}
+
+static NPY_INLINE complex_int8 complex_int8_scalar_multiply(npy_cdouble s, complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = s.real*sc[0] - s.imag*sc[1];
+    signed char imag = s.imag*sc[0] + s.real*sc[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_scalar_multiply(npy_cdouble s, complex_int8* c) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    signed char real = s.real*sc[0] - s.imag*sc[1];
+    signed char imag = s.imag*sc[0] + s.real*sc[1];
+    inplace_pack_ci8(real, imag, c);
+}
+
+static NPY_INLINE complex_int8 complex_int8_multiply_scalar(complex_int8 c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    signed char real = s.real*sc[0] - s.imag*sc[1];
+    signed char imag = s.imag*sc[0] + s.real*sc[1];
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_multiply_scalar(complex_int8* c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    signed char real = s.real*sc[0] - s.imag*sc[1];
+    signed char imag = s.imag*sc[0] + s.real*sc[1];
+    inplace_pack_ci8(real, imag, c);
+}
+
+static NPY_INLINE complex_int8 complex_int8_divide(complex_int8 c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1.real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    int mag2 = ((int) sc2[0])*sc2[0] + ((int) sc1[1])*sc1[1];
+    signed char real = (sc1[0]*sc2[0] + sc1[1]*sc2[1]) / mag2;
+    signed char imag = (sc1[1]*sc2[0] - sc1[0]*sc2[1]) / mag2;
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_divide(complex_int8* c1, complex_int8 c2) {
+    const signed char* sc1 = fourBitLUT[c1->real_imag];
+    const signed char* sc2 = fourBitLUT[c2.real_imag];
+    int mag2 = ((int) sc2[0])*sc2[0] + ((int) sc1[1])*sc1[1];
+    signed char real = (sc1[0]*sc2[0] + sc1[1]*sc2[1]) / mag2;
+    signed char imag = (sc1[1]*sc2[0] - sc1[0]*sc2[1]) / mag2;
+    inplace_pack_ci8(real, imag, c1);
+}
+
+static NPY_INLINE complex_int8 complex_int8_scalar_divide(npy_cdouble s, complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    int mag2 = ((int) sc[0])*sc[0] + ((int) sc[1])*sc[1];
+    signed char real = (s.real*sc[0] + s.imag*sc[1]) / mag2;
+    signed char imag = (s.real*sc[0] - s.imag*sc[1]) / mag2;
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_scalar_divide(npy_cdouble s, complex_int8* c) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    int mag2 = ((int) sc[0])*sc[0] + ((int) sc[1])*sc[1];
+    signed char real = (s.real*sc[0] + s.imag*sc[1]) / mag2;
+    signed char imag = (s.real*sc[0] - s.imag*sc[1]) / mag2;
+    inplace_pack_ci8(real, imag, c);
+}
+
+static NPY_INLINE complex_int8 complex_int8_divide_scalar(complex_int8 c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    double mag2 = s.real*s.real + s.imag*s.imag;
+    signed char real = (sc[0]*s.real - sc[1]*s.imag) / mag2;
+    signed char imag = (sc[1]*s.real + sc[0]*s.imag) / mag2;
+    return pack_ci8(real, imag);
+}
+
+static NPY_INLINE void complex_int8_inplace_divide_scalar(complex_int8* c, npy_cdouble s) {
+    const signed char* sc = fourBitLUT[c->real_imag];
+    double mag2 = s.real*s.real + s.imag*s.imag;
+    signed char real = (sc[0]*s.real - sc[1]*s.imag) / mag2;
+    signed char imag = (sc[1]*s.real + sc[0]*s.imag) / mag2;
+    inplace_pack_ci8(real, imag, c);
+}
 
 #ifdef __cplusplus
 }

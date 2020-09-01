@@ -18,6 +18,12 @@
 // Complex 16-bit + 16-bit integer
 #include "numpy_complex_int32.c"
 
+static NPY_INLINE int PyComplexInt_Check(PyObject *o) {
+    return (PyComplexInt8_Check(o) \
+            || PyComplexInt16_Check(o) \
+            || PyComplexInt32_Check(o));
+}
+
 static PyMethodDef ComplexIntMethods[] = {
     {NULL, NULL, 0, NULL}
 };
@@ -108,5 +114,3 @@ PyMODINIT_FUNC initnumpy_complex_int(void) {
     return m;
 #endif
 }
-
-
