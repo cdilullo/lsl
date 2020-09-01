@@ -109,18 +109,19 @@ class reader_adp_tests(unittest.TestCase):
         fh.close()
         
         # Multiplication
-        frameT = frames[0] * 2.0
+        frameT = frames[0] * 2
         for i in range(12*256*2):
             c = i // 2 // 256
             s = i // 2 % 256
             p = i % 2
             self.assertAlmostEqual(frameT.payload.data[c,s,p], 2*frames[0].payload.data[c,s,p], 2)
-        frameT *= 2.0
+        frameT //= 2
         for i in range(12*256*2):
             c = i // 2 // 256
             s = i // 2 % 256
             p = i % 2
-            self.assertAlmostEqual(frameT.payload.data[c,s,p], 4*frames[0].payload.data[c,s,p], 2)
+            ## There needs to be a better way to deal with this
+            self.assertAlmostEqual(frameT.payload.data[c,s,p], 2*frames[0].payload.data[c,s,p]//2, 2)
         frameT = frames[0] * frames[1]
         for i in range(12*256*2):
             c = i // 2 // 256
@@ -129,18 +130,18 @@ class reader_adp_tests(unittest.TestCase):
             self.assertAlmostEqual(frameT.payload.data[c,s,p], frames[0].payload.data[c,s,p]*frames[1].payload.data[c,s,p], 2)
             
         # Addition
-        frameA = frames[0] + 2.0
+        frameA = frames[0] + 2
         for i in range(800):
             c = i // 2 // 256
             s = i // 2 % 256
             p = i % 2
             self.assertAlmostEqual(frameA.payload.data[c,s,p], 2+frames[0].payload.data[c,s,p], 2)
-        frameA += 2.0
+        frameA -= 2
         for i in range(800):
             c = i // 2 // 256
             s = i // 2 % 256
             p = i % 2
-            self.assertAlmostEqual(frameA.payload.data[c,s,p], 4+frames[0].payload.data[c,s,p], 2)
+            self.assertAlmostEqual(frameA.payload.data[c,s,p], 0+frames[0].payload.data[c,s,p], 2)
         frameA = frames[0] + frames[1]
         for i in range(800):
             c = i // 2 // 256

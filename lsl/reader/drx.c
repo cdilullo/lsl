@@ -73,7 +73,7 @@ PyObject *read_drx(PyObject *self, PyObject *args) {
     // Create the output data array
     npy_intp dims[1];
     dims[0] = (npy_intp) 4096;
-    data = (PyArrayObject*) PyArray_ZEROS(1, dims, NPY_COMPLEX64, 0);
+    data = (PyArrayObject*) PyArray_ZEROS(1, dims, NPY_COMPLEX_INT8, 0);
     if(data == NULL) {
         PyErr_Format(PyExc_MemoryError, "Cannot create output array");
         Py_XDECREF(data);
@@ -115,13 +115,17 @@ PyObject *read_drx(PyObject *self, PyObject *args) {
     cFrame.payload.flags = __bswap_32(cFrame.payload.flags);
     
     // Fill the data array
-    const float *fp;
-    float complex *a;
-    a = (float complex *) PyArray_DATA(data);
+    //const float *fp;
+    unsigned char *a;
+    a = (unsigned char *) PyArray_DATA(data);
+    memcpy(a, &cFrame.payload.bytes, 4096);
+    /*
     for(i=0; i<4096; i++) {
-        fp = drxLUT[ cFrame.payload.bytes[i] ];
-        *(a + i) = fp[0] + _Complex_I * fp[1];
+        //fp = drxLUT[ cFrame.payload.bytes[i] ];
+        //*(a + i) = fp[0] + _Complex_I * fp[1];
+        *(a + i) = cFrame.payload.bytes[i];
     }
+    */
     
     Py_END_ALLOW_THREADS
     

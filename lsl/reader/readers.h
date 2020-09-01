@@ -14,6 +14,8 @@
 #define __bswap_64 OSSwapInt64
 #endif
 
+#include "../complex/complex_int.h"
+
 /*
  Python3 compatibility
 */

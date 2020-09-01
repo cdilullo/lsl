@@ -69,7 +69,7 @@ PyObject *read_tbn(PyObject *self, PyObject *args) {
     // Create the output data array
     npy_intp dims[1];
     dims[0] = (npy_intp) 512;
-    data = (PyArrayObject*) PyArray_ZEROS(1, dims, NPY_COMPLEX64, 0);
+    data = (PyArrayObject*) PyArray_ZEROS(1, dims, NPY_COMPLEX_INT16, 0);
     if(data == NULL) {
         PyErr_Format(PyExc_MemoryError, "Cannot create output array");
         Py_XDECREF(data);
@@ -109,11 +109,14 @@ PyObject *read_tbn(PyObject *self, PyObject *args) {
     cFrame.payload.timetag = __bswap_64(cFrame.payload.timetag);
     
     // Fill the data array
-    float complex *a;
-    a = (float complex *) PyArray_DATA(data);
+    short int *a;
+    a = (short int *) PyArray_DATA(data);
+    memcpy(a, &cFrame.payload.bytes, 1024);
+    /*
     for(i=0; i<512; i++) {
         *(a + i) = tbnLUT[ cFrame.payload.bytes[2*i+0] ] + _Complex_I * tbnLUT[ cFrame.payload.bytes[2*i+1] ];
     }
+    */
     
     Py_END_ALLOW_THREADS
     

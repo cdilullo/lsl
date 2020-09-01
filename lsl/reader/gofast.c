@@ -100,7 +100,7 @@ PyDoc_STRVAR(GoFast_doc, "Go Fast! (TM) - TBW, TBN, DRX, DR Spectrometer, and VD
 */
 
 MOD_INIT(_gofast) {
-    PyObject *m, *all, *dict1, *dict2;
+    PyObject *m, *all, *pModule, *dict1, *dict2;
     
     Py_Initialize();
     
@@ -148,7 +148,7 @@ MOD_INIT(_gofast) {
     PyModule_AddObject(m, "EOFError", EOFError);
     
     // Version and revision information
-    PyModule_AddObject(m, "__version__", PyString_FromString("0.8"));
+    PyModule_AddObject(m, "__version__", PyString_FromString("0.9"));
     
     // Correlator channel count
     PyModule_AddObject(m, "NCHAN_COR", PyInt_FromLong(COR_NCHAN));
@@ -166,6 +166,9 @@ MOD_INIT(_gofast) {
     PyList_Append(all, PyString_FromString("EOFError"));
     PyList_Append(all, PyString_FromString("NCHAN_COR"));
     PyModule_AddObject(m, "__all__", all);
+    
+    // LSL complex integer support
+    import_complex_int();
     
     return MOD_SUCCESS_VAL(m);
 }

@@ -65,7 +65,7 @@ PyObject *read_tbf(PyObject *self, PyObject *args) {
     dims[0] = (npy_intp) 12;
     dims[1] = (npy_intp) 256;
     dims[2] = (npy_intp) 2;
-    data = (PyArrayObject*) PyArray_ZEROS(3, dims, NPY_COMPLEX64, 0);
+    data = (PyArrayObject*) PyArray_ZEROS(3, dims, NPY_COMPLEX_INT8, 0);
     if(data == NULL) {
         PyErr_Format(PyExc_MemoryError, "Cannot create output array");
         Py_XDECREF(data);
@@ -104,13 +104,16 @@ PyObject *read_tbf(PyObject *self, PyObject *args) {
     cFrame.payload.timetag = __bswap_64(cFrame.payload.timetag);
     
     // Fill the data array
-    const float *fp;
-    float complex *a;
-    a = (float complex *) PyArray_DATA(data);
+    //const float *fp;
+    unsigned char *a;
+    a = (unsigned char *) PyArray_DATA(data);
+    memcpy(a, cFrame.payload.bytes, 6144);
+    /*
     for(i=0; i<6144; i++) {
         fp = tbfLUT[ cFrame.payload.bytes[i] ];
         *(a + i) = fp[0] + _Complex_I * fp[1];
     }
+    */
     
     Py_END_ALLOW_THREADS
     
