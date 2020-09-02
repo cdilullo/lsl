@@ -74,8 +74,8 @@ def frame_to_frame(drx_frame):
     rawFrame[30] = (drx_frame.payload.flags>>8) & 255
     rawFrame[31] = drx_frame.payload.flags & 255
     ## Data
-    i = drx_frame.payload.data.real
-    q = drx_frame.payload.data.imag
+    i = drx_frame.payload.data.astype(numpy.complex64).real
+    q = drx_frame.payload.data.astype(numpy.complex64).imag
     ### Round, clip, and convert to unsigned integers
     i = i.round()
     i = i.clip(-8, 7)
@@ -172,7 +172,7 @@ class SimFrame(drx.Frame):
         ## Data
         self.obs_time = self.payload.timetag
         self.flags = self.payload.flags
-        self.data = self.payload.data
+        self.data = self.payload.data.astype(numpy.complex64)
     
     def is_valid(self, raise_errors=False):
         """

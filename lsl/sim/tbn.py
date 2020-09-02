@@ -145,7 +145,7 @@ class SimFrame(tbn.Frame):
         self.frame_count = self.header.frame_count
         ## Data
         self.obs_time = self.payload.timetag
-        self.data = self.payload.data
+        self.data = self.payload.data.astype(numpy.complex64)
     
     def is_valid(self, raise_errors=False):
         """
