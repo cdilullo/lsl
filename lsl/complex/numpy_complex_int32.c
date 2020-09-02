@@ -49,7 +49,7 @@ static int pycomplexint32_init(PyObject *self, PyObject *args, PyObject *kwds) {
     Py_ssize_t size = PyTuple_Size(args);
     complex_int32 *c;
     Py_complex cmplx;
-    signed char real, imag;
+    long real, imag;
     
     PyObject *C = {0};
     c = &(((PyComplexInt32 *) self)->obval);
@@ -65,17 +65,32 @@ static int pycomplexint32_init(PyObject *self, PyObject *args, PyObject *kwds) {
     if( size == 0 ) {
         return 0;
     } else if( size == 1) {
-        if( PyArg_ParseTuple(args, "O", &C) && PyComplexInt32_Check(C) ) {
-            c->real = ((PyComplexInt32 *) C)->obval.real;
-            c->imag = ((PyComplexInt32 *) C)->obval.imag;
-            return 0;
+        if( PyArg_ParseTuple(args, "O", &C) && (PyComplexInt8_Check(C) || PyComplexInt16_Check(C) || PyComplexInt32_Check(C)) ) {
+            if( PyComplexInt8_Check(C) ) {
+                const signed char* sc = fourBitLUT[((PyComplexInt8 *) C)->obval.real_imag];
+                c->real = sc[0];
+                c->imag = sc[1];
+                return 0;
+            } else if( PyComplexInt16_Check(C) ) {
+                c->real = ((PyComplexInt16 *) C)->obval.real;
+                c->imag = ((PyComplexInt16 *) C)->obval.imag;
+                return 0;
+            } else if( PyComplexInt32_Check(C) ) {
+                c->real = ((PyComplexInt32 *) C)->obval.real;
+                c->imag = ((PyComplexInt32 *) C)->obval.imag;
+                return 0;
+            }
         } else if( PyArg_ParseTuple(args, "D", &cmplx) ) {
             c->real = cmplx.real;
             c->imag = cmplx.imag;
             return 0;
+        } else if( PyArg_ParseTuple(args, "i", &real) ) {
+            c->real = real;
+            c->imag = 0;
+            return 0;
         }
     } else if( size == 2 ) {
-        if( PyArg_ParseTuple(args, "bb", &real, &imag) ) {
+        if( PyArg_ParseTuple(args, "ii", &real, &imag) ) {
             c->real = real;
             c->imag = imag;
             return 0;
@@ -114,6 +129,16 @@ BINARY_BOOL_RETURNER_CI32(less)
 BINARY_BOOL_RETURNER_CI32(greater)
 BINARY_BOOL_RETURNER_CI32(less_equal)
 BINARY_BOOL_RETURNER_CI32(greater_equal)
+
+#define UNARY_INT_RETURNER_CI32(name)                                      \
+    static PyObject*                                                    \
+        pycomplexint32_##name(PyObject* a, PyObject* NPY_UNUSED(b)) {    \
+        complex_int32 q = {0, 0};                                           \
+        PyComplexInt32_AsComplexInt32(q, a);                              \
+        return PyInt_FromLong(complex_int32_##name(q));              \
+    }
+UNARY_INT_RETURNER_CI32(real)
+UNARY_INT_RETURNER_CI32(imag)
 
 #define UNARY_FLOAT_RETURNER_CI32(name)                                      \
     static PyObject*                                                    \
@@ -228,8 +253,8 @@ CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(add, add)
 CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(subtract, subtract)
 CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(multiply, multiply)
 CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(divide, divide)
-/* CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(true_divide, divide) */
-/* CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(floor_divide, divide) */
+CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(true_divide, divide)
+CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(floor_divide, divide)
 /* CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_RETURNER(power, power) */
 
 #define CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(fake_name, name)        \
@@ -258,8 +283,8 @@ CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(add, add)
 CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(subtract, subtract)
 CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(multiply, multiply)
 CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(divide, divide)
-/* CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(true_divide, divide) */
-/* CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(floor_divide, divide) */
+CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(true_divide, divide)
+CI32CI32_CI32S_SCI32_BINARY_COMPLEX_INT32_INPLACE(floor_divide, divide)
 
 static PyObject* pycomplexint32__reduce(PyComplexInt32* self) {
     return Py_BuildValue("O(OO)", Py_TYPE(self), PyInt_FromLong(self->obval.real), PyInt_FromLong(self->obval.imag));
@@ -311,7 +336,13 @@ PyMethodDef pycomplexint32_methods[] = {
    "Dictionary ordering"},
   {"greater_equal", pycomplexint32_greater_equal, METH_O,
    "Dictionary ordering"},
-
+  
+  // Unary ing returners
+  {"real_part", pycomplexint32_real, METH_NOARGS,
+   "real part of the complex value"},
+  {"imag_part", pycomplexint32_imag, METH_NOARGS,
+   "imaginary part of the complex value"},
+  
   // Unary float returners
   {"absolute", pycomplexint32_absolute, METH_NOARGS,
    "Absolute value of complex_int32"},
@@ -435,9 +466,9 @@ static PyNumberMethods pycomplexint32_as_number = {
 // and will be used in the `tp_members` field when definining the
 // PyComplexInt32_Type below.
 PyMemberDef pycomplexint32_members[] = {
-  {"real", T_INT, offsetof(PyComplexInt32, obval.real), 0,
+  {"real", T_SHORT, offsetof(PyComplexInt32, obval.real), 0,
    "The packed real component of the complex_int32"},
-  {"imag", T_INT, offsetof(PyComplexInt32, obval.imag), 0,
+  {"imag", T_SHORT, offsetof(PyComplexInt32, obval.imag), 0,
    "The packed imaginary component of the complex_int32"},
   {NULL, 0, 0, 0, NULL}
 };
@@ -791,6 +822,8 @@ static void register_cast_function_ci32(int sourceType, int destType, PyArray_Ve
 UNARY_UFUNC_CI32(isnan, npy_bool)
 UNARY_UFUNC_CI32(isinf, npy_bool)
 UNARY_UFUNC_CI32(isfinite, npy_bool)
+UNARY_UFUNC_CI32(real, npy_long)
+UNARY_UFUNC_CI32(imag, npy_long)
 UNARY_UFUNC_CI32(norm, npy_double)
 UNARY_UFUNC_CI32(absolute, npy_double)
 UNARY_UFUNC_CI32(angle, npy_double)
@@ -973,7 +1006,7 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     register_cast_function_ci32(NPY_SHORT, complexi32Num, (PyArray_VectorUnaryFunc*)SHORT_to_complex_int32);
     
     register_cast_function_ci32(NPY_COMPLEX_INT8, complexi32Num, (PyArray_VectorUnaryFunc*)CI8_to_complex_int32);
-    //register_cast_function_ci32(NPY_COMPLEX_INT16, complexi32Num, (PyArray_VectorUnaryFunc*)CI16_to_complex_int32);
+    register_cast_function_ci32(NPY_COMPLEX_INT16, complexi32Num, (PyArray_VectorUnaryFunc*)CI16_to_complex_int32);
     
     register_cast_function_ci32(complexi32Num, NPY_CFLOAT, (PyArray_VectorUnaryFunc*)complex_int32_to_CFLOAT);
     register_cast_function_ci32(complexi32Num, NPY_CDOUBLE, (PyArray_VectorUnaryFunc*)complex_int32_to_CDOUBLE);
@@ -1011,6 +1044,14 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI32(isinf);
     REGISTER_UFUNC_CI32(isfinite);
     
+    /* complex_int32 -> long */
+    arg_types[1] = NPY_LONG;
+    
+    REGISTER_NEW_UFUNC_GENERAL_CI32(real_part, real, 1, 1, \
+                                    "Return the real part of the complex number\n");
+    REGISTER_NEW_UFUNC_GENERAL_CI32(imag_part, imag, 1, 1, \
+                                    "Return the imaginary part of the complex number\n");
+    
     /* complex_int32 -> double */
     arg_types[1] = NPY_DOUBLE;
     
@@ -1019,7 +1060,6 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI32(absolute);
     REGISTER_NEW_UFUNC_GENERAL_CI32(angle, angle, 1, 1, \
                                    "Return the angle of the complex argument\n");
-    
     
     /* complex_int32 -> complex_int32 */
     arg_types[1] = complex_int32_descr->type_num;
@@ -1042,6 +1082,8 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI32(subtract);
     REGISTER_UFUNC_CI32(multiply);
     REGISTER_UFUNC_CI32(divide);
+    REGISTER_UFUNC_CI32(true_divide);
+    REGISTER_UFUNC_CI32(floor_divide);
     
     /* long, complex_int32 -> complex_int32 */
     arg_types[0] = NPY_LONG;
@@ -1052,6 +1094,8 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     REGISTER_SCALAR_UFUNC_CI32(subtract);
     REGISTER_SCALAR_UFUNC_CI32(multiply);
     REGISTER_SCALAR_UFUNC_CI32(divide);
+    REGISTER_SCALAR_UFUNC_CI32(true_divide);
+    REGISTER_SCALAR_UFUNC_CI32(floor_divide);
     
     /* complex_int32, long -> complex_int32 */
     arg_types[0] = complex_int32_descr->type_num;
@@ -1062,6 +1106,8 @@ int create_complex_int32(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_SCALAR_CI32(subtract);
     REGISTER_UFUNC_SCALAR_CI32(multiply);
     REGISTER_UFUNC_SCALAR_CI32(divide);
+    REGISTER_UFUNC_SCALAR_CI32(true_divide);
+    REGISTER_UFUNC_SCALAR_CI32(floor_divide);
     
     PyModule_AddObject(m, "complex_int32", (PyObject *)&PyComplexInt32_Type);
     

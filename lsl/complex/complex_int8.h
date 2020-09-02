@@ -18,14 +18,14 @@ void complex_int8_fillLUT();
 
 static NPY_INLINE complex_int8 pack_ci8(signed char real, signed char imag) {
     complex_int8 c;
-    c.real_imag =  (real * 16) & 0xF0;
-    c.real_imag |= (imag * 16) >> 4;
+    c.real_imag  = (real * 16) & 0xF0;
+    c.real_imag |= ((imag * 16) >> 4) & 0x0F;
     return c;
 }
 
 static NPY_INLINE void inplace_pack_ci8(signed char real, signed char imag, complex_int8 *c) {
-    c->real_imag =  (real * 16) & 0xF0;
-    c->real_imag |= (imag * 16) >> 4;
+    c->real_imag  = (real * 16) & 0xF0;
+    c->real_imag |= ((imag * 16) >> 4) & 0x0F;
 }
 
 // Unary bool operators
@@ -99,6 +99,17 @@ static NPY_INLINE int complex_int8_greater_equal(complex_int8 c1, complex_int8 c
          !complex_int8_isnan(c2)) && (
             sc1[0] != sc2[0] ? sc1[0] > sc2[0] :
             sc1[1] != sc2[1] ? sc1[1] > sc2[1] : 1);
+}
+
+// Unary int returners
+static NPY_INLINE long complex_int8_real(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return (long) sc[0];
+}
+
+static NPY_INLINE long complex_int8_imag(complex_int8 c) {
+    const signed char* sc = fourBitLUT[c.real_imag];
+    return (long) sc[1];
 }
 
 // Unary float returners

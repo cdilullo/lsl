@@ -75,6 +75,15 @@ static NPY_INLINE int complex_int32_greater_equal(complex_int32 c1, complex_int3
             c1.imag != c2.imag ? c1.imag > c2.imag : 1);
 }
 
+// Unary int returners
+static NPY_INLINE long complex_int32_real(complex_int32 c) {
+    return (long) c.real;
+}
+
+static NPY_INLINE long complex_int32_imag(complex_int32 c) {
+    return (long) c.imag;
+}
+
 // Unary float returners
 static NPY_INLINE double complex_int32_norm(complex_int32 c) {
     return (((int) c.real)*c.real + ((int) c.imag)*c.imag)*1.0;

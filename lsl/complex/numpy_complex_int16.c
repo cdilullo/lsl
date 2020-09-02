@@ -49,7 +49,7 @@ static int pycomplexint16_init(PyObject *self, PyObject *args, PyObject *kwds) {
     Py_ssize_t size = PyTuple_Size(args);
     complex_int16 *c;
     Py_complex cmplx;
-    signed char real, imag;
+    long real, imag;
     
     PyObject *C = {0};
     c = &(((PyComplexInt16 *) self)->obval);
@@ -65,17 +65,28 @@ static int pycomplexint16_init(PyObject *self, PyObject *args, PyObject *kwds) {
     if( size == 0 ) {
         return 0;
     } else if( size == 1) {
-        if( PyArg_ParseTuple(args, "O", &C) && PyComplexInt16_Check(C) ) {
-            c->real = ((PyComplexInt16 *) C)->obval.real;
-            c->imag = ((PyComplexInt16 *) C)->obval.imag;
-            return 0;
+        if( PyArg_ParseTuple(args, "O", &C) && (PyComplexInt8_Check(C) || PyComplexInt16_Check(C)) ) {
+            if( PyComplexInt8_Check(C) ) {
+                const signed char* sc = fourBitLUT[((PyComplexInt8 *) C)->obval.real_imag];
+                c->real = sc[0];
+                c->imag = sc[1];
+                return 0;
+            } else if( PyComplexInt16_Check(C) ) {
+                c->real = ((PyComplexInt16 *) C)->obval.real;
+                c->imag = ((PyComplexInt16 *) C)->obval.imag;
+                return 0;
+            }
         } else if( PyArg_ParseTuple(args, "D", &cmplx) ) {
             c->real = cmplx.real;
             c->imag = cmplx.imag;
             return 0;
+        } else if( PyArg_ParseTuple(args, "i", &real) ) {
+            c->real = real;
+            c->imag = 0;
+            return 0;
         }
     } else if( size == 2 ) {
-        if( PyArg_ParseTuple(args, "bb", &real, &imag) ) {
+        if( PyArg_ParseTuple(args, "ii", &real, &imag) ) {
             c->real = real;
             c->imag = imag;
             return 0;
@@ -114,6 +125,16 @@ BINARY_BOOL_RETURNER_CI16(less)
 BINARY_BOOL_RETURNER_CI16(greater)
 BINARY_BOOL_RETURNER_CI16(less_equal)
 BINARY_BOOL_RETURNER_CI16(greater_equal)
+
+#define UNARY_INT_RETURNER_CI16(name)                                      \
+    static PyObject*                                                    \
+        pycomplexint16_##name(PyObject* a, PyObject* NPY_UNUSED(b)) {    \
+        complex_int16 q = {0, 0};                                           \
+        PyComplexInt16_AsComplexInt16(q, a);                              \
+        return PyInt_FromLong(complex_int16_##name(q));              \
+    }
+UNARY_INT_RETURNER_CI16(real)
+UNARY_INT_RETURNER_CI16(imag)
 
 #define UNARY_FLOAT_RETURNER_CI16(name)                                      \
     static PyObject*                                                    \
@@ -228,8 +249,8 @@ CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(add, add)
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(subtract, subtract)
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(multiply, multiply)
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(divide, divide)
-/* CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(true_divide, divide) */
-/* CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(floor_divide, divide) */
+CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(true_divide, divide)
+CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(floor_divide, divide)
 /* CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_RETURNER(power, power) */
 
 #define CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(fake_name, name)        \
@@ -258,8 +279,8 @@ CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(add ,add)
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(subtract, subtract)
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(multiply, multiply)
 CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(divide, divide)
-/* CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(true_divide, divide) */
-/* CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(floor_divide, divide) */
+CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(true_divide, divide)
+CI16CI16_CI16S_SCI16_BINARY_COMPLEX_INT16_INPLACE(floor_divide, divide)
 
 static PyObject* pycomplexint16__reduce(PyComplexInt16* self) {
     return Py_BuildValue("O(OO)", Py_TYPE(self), PyInt_FromLong(self->obval.real), PyInt_FromLong(self->obval.imag));
@@ -311,6 +332,12 @@ PyMethodDef pycomplexint16_methods[] = {
    "Dictionary ordering"},
   {"greater_equal", pycomplexint16_greater_equal, METH_O,
    "Dictionary ordering"},
+
+  // Unary ing returners
+  {"real_part", pycomplexint16_real, METH_NOARGS,
+   "real part of the complex value"},
+  {"imag_part", pycomplexint16_imag, METH_NOARGS,
+   "imaginary part of the complex value"},
 
   // Unary float returners
   {"absolute", pycomplexint16_absolute, METH_NOARGS,
@@ -435,9 +462,9 @@ static PyNumberMethods pycomplexint16_as_number = {
 // and will be used in the `tp_members` field when definining the
 // PyComplexInt16_Type below.
 PyMemberDef pycomplexint16_members[] = {
-  {"real", T_INT, offsetof(PyComplexInt16, obval.real), 0,
+  {"real", T_BYTE, offsetof(PyComplexInt16, obval.real), 0,
    "The packed real component of the complex_int16"},
-  {"imag", T_INT, offsetof(PyComplexInt16, obval.imag), 0,
+  {"imag", T_BYTE, offsetof(PyComplexInt16, obval.imag), 0,
    "The packed imaginary component of the complex_int16"},
   {NULL, 0, 0, 0, NULL}
 };
@@ -776,6 +803,8 @@ static void register_cast_function_ci16(int sourceType, int destType, PyArray_Ve
 UNARY_UFUNC_CI16(isnan, npy_bool)
 UNARY_UFUNC_CI16(isinf, npy_bool)
 UNARY_UFUNC_CI16(isfinite, npy_bool)
+UNARY_UFUNC_CI16(real, npy_long)
+UNARY_UFUNC_CI16(imag, npy_long)
 UNARY_UFUNC_CI16(norm, npy_double)
 UNARY_UFUNC_CI16(absolute, npy_double)
 UNARY_UFUNC_CI16(angle, npy_double)
@@ -994,6 +1023,14 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI16(isinf);
     REGISTER_UFUNC_CI16(isfinite);
     
+    /* complex_int16 -> long */
+    arg_types[1] = NPY_LONG;
+    
+    REGISTER_NEW_UFUNC_GENERAL_CI16(real_part, real, 1, 1, \
+                                    "Return the real part of the complex number\n");
+    REGISTER_NEW_UFUNC_GENERAL_CI16(imag_part, imag, 1, 1, \
+                                    "Return the imaginary part of the complex number\n");
+    
     /* complex_int16 -> double */
     arg_types[1] = NPY_DOUBLE;
     
@@ -1002,7 +1039,6 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI16(absolute);
     REGISTER_NEW_UFUNC_GENERAL_CI16(angle, angle, 1, 1, \
                                     "Return the angle of the complex argument\n");
-    
     
     /* complex_int16 -> complex_int16 */
     arg_types[1] = complex_int16_descr->type_num;
@@ -1025,6 +1061,8 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI16(subtract);
     REGISTER_UFUNC_CI16(multiply);
     REGISTER_UFUNC_CI16(divide);
+    REGISTER_UFUNC_CI16(true_divide);
+    REGISTER_UFUNC_CI16(floor_divide);
     
     /* long, complex_int16 -> complex_int16 */
     arg_types[0] = NPY_LONG;
@@ -1035,6 +1073,8 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     REGISTER_SCALAR_UFUNC_CI16(subtract);
     REGISTER_SCALAR_UFUNC_CI16(multiply);
     REGISTER_SCALAR_UFUNC_CI16(divide);
+    REGISTER_SCALAR_UFUNC_CI16(true_divide);
+    REGISTER_SCALAR_UFUNC_CI16(floor_divide);
     
     /* complex_int16, long -> complex_int16 */
     arg_types[0] = complex_int16_descr->type_num;
@@ -1045,6 +1085,8 @@ int create_complex_int16(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_SCALAR_CI16(subtract);
     REGISTER_UFUNC_SCALAR_CI16(multiply);
     REGISTER_UFUNC_SCALAR_CI16(divide);
+    REGISTER_UFUNC_SCALAR_CI16(true_divide);
+    REGISTER_UFUNC_SCALAR_CI16(floor_divide);
     
     PyModule_AddObject(m, "complex_int16", (PyObject *)&PyComplexInt16_Type);
     

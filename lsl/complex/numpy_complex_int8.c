@@ -49,7 +49,7 @@ static int pycomplexint8_init(PyObject *self, PyObject *args, PyObject *kwds) {
     Py_ssize_t size = PyTuple_Size(args);
     complex_int8 *c;
     Py_complex cmplx;
-    signed char real, imag;
+    long real, imag;
     
     PyObject *C = {0};
     c = &(((PyComplexInt8 *) self)->obval);
@@ -70,10 +70,13 @@ static int pycomplexint8_init(PyObject *self, PyObject *args, PyObject *kwds) {
         } else if( PyArg_ParseTuple(args, "D", &cmplx) ) {
             inplace_pack_ci8(cmplx.real, cmplx.imag, c);
             return 0;
+        } else if( PyArg_ParseTuple(args, "i", &real) ) {
+            inplace_pack_ci8((signed char) real, 0, c);
+            return 0;
         }
     } else if( size == 2 ) {
-        if( PyArg_ParseTuple(args, "bb", &real, &imag) ) {
-            inplace_pack_ci8(real, imag, c);
+        if( PyArg_ParseTuple(args, "ii", &real, &imag) ) {
+            inplace_pack_ci8((signed char) real, imag, c);
             return 0;
         }
     }
@@ -110,6 +113,16 @@ BINARY_BOOL_RETURNER_CI8(less)
 BINARY_BOOL_RETURNER_CI8(greater)
 BINARY_BOOL_RETURNER_CI8(less_equal)
 BINARY_BOOL_RETURNER_CI8(greater_equal)
+
+#define UNARY_INT_RETURNER_CI8(name)                                      \
+    static PyObject*                                                    \
+        pycomplexint8_##name(PyObject* a, PyObject* NPY_UNUSED(b)) {    \
+        complex_int8 q = {0};                                           \
+        PyComplexInt8_AsComplexInt8(q, a);                              \
+        return PyInt_FromLong(complex_int8_##name(q));              \
+    }
+UNARY_INT_RETURNER_CI8(real)
+UNARY_INT_RETURNER_CI8(imag)
 
 #define UNARY_FLOAT_RETURNER_CI8(name)                                  \
     static PyObject*                                                    \
@@ -224,7 +237,7 @@ CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(add, add)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(subtract, subtract)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(multiply, multiply)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(divide, divide)
-/* CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(true_divide, divide) */
+CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(true_divide, divide)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(floor_divide, divide)
 /* CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_RETURNER(power, power) */
 
@@ -254,7 +267,7 @@ CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_INPLACE(add, add)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_INPLACE(subtract, subtract)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_INPLACE(multiply, multiply)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_INPLACE(divide, divide)
-/* CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_INPLACE(true_divide, divide) */
+CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_INPLACE(true_divide, divide)
 CI8CI8_CI8S_SCI8_BINARY_COMPLEX_INT8_INPLACE(floor_divide, divide)
 
 static PyObject* pycomplexint8__reduce(PyComplexInt8* self) {
@@ -307,7 +320,13 @@ PyMethodDef pycomplexint8_methods[] = {
    "Dictionary ordering"},
   {"greater_equal", pycomplexint8_greater_equal, METH_O,
    "Dictionary ordering"},
-
+  
+  // Unary ing returners
+  {"real_part", pycomplexint8_real, METH_NOARGS,
+   "real part of the complex value"},
+  {"imag_part", pycomplexint8_imag, METH_NOARGS,
+   "imaginary part of the complex value"},
+  
   // Unary float returners
   {"absolute", pycomplexint8_absolute, METH_NOARGS,
    "Absolute value of complex_int8"},
@@ -431,7 +450,7 @@ static PyNumberMethods pycomplexint8_as_number = {
 // and will be used in the `tp_members` field when definining the
 // PyComplexInt8_Type below.
 PyMemberDef pycomplexint8_members[] = {
-  {"real_imag", T_INT, offsetof(PyComplexInt8, obval.real_imag), 0,
+  {"real_imag", T_BYTE, offsetof(PyComplexInt8, obval.real_imag), 0,
    "The packed real and imaginary component of the complex_int8"},
   {NULL, 0, 0, 0, NULL}
 };
@@ -760,6 +779,8 @@ static void register_cast_function_ci8(int sourceType, int destType, PyArray_Vec
 UNARY_UFUNC_CI8(isnan, npy_bool)
 UNARY_UFUNC_CI8(isinf, npy_bool)
 UNARY_UFUNC_CI8(isfinite, npy_bool)
+UNARY_UFUNC_CI8(real, npy_long)
+UNARY_UFUNC_CI8(imag, npy_long)
 UNARY_UFUNC_CI8(norm, npy_double)
 UNARY_UFUNC_CI8(absolute, npy_double)
 UNARY_UFUNC_CI8(angle, npy_double)
@@ -978,6 +999,14 @@ int create_complex_int8(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI8(isinf);
     REGISTER_UFUNC_CI8(isfinite);
     
+    /* complex_int8 -> long */
+    arg_types[1] = NPY_LONG;
+    
+    REGISTER_NEW_UFUNC_GENERAL_CI8(real_part, real, 1, 1, \
+                                   "Return the real part of the complex number\n");
+    REGISTER_NEW_UFUNC_GENERAL_CI8(imag_part, imag, 1, 1, \
+                                   "Return the imaginary part of the complex number\n");
+    
     /* complex_int8 -> double */
     arg_types[1] = NPY_DOUBLE;
     
@@ -1008,6 +1037,7 @@ int create_complex_int8(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_CI8(subtract);
     REGISTER_UFUNC_CI8(multiply);
     REGISTER_UFUNC_CI8(divide);
+    REGISTER_UFUNC_CI8(true_divide);
     REGISTER_UFUNC_CI8(floor_divide);
     
     /* long, complex_int8 -> complex_int8 */
@@ -1019,6 +1049,7 @@ int create_complex_int8(PyObject* m, PyObject* numpy_dict) {
     REGISTER_SCALAR_UFUNC_CI8(subtract);
     REGISTER_SCALAR_UFUNC_CI8(multiply);
     REGISTER_SCALAR_UFUNC_CI8(divide);
+    REGISTER_SCALAR_UFUNC_CI8(true_divide);
     REGISTER_SCALAR_UFUNC_CI8(floor_divide);
     
     /* complex_int8, long -> complex_int8 */
@@ -1030,6 +1061,7 @@ int create_complex_int8(PyObject* m, PyObject* numpy_dict) {
     REGISTER_UFUNC_SCALAR_CI8(subtract);
     REGISTER_UFUNC_SCALAR_CI8(multiply);
     REGISTER_UFUNC_SCALAR_CI8(divide);
+    REGISTER_UFUNC_SCALAR_CI8(true_divide);
     REGISTER_UFUNC_SCALAR_CI8(floor_divide);
     
     PyModule_AddObject(m, "complex_int8", (PyObject *)&PyComplexInt8_Type);
